@@ -1,0 +1,42 @@
+# Одноразовый процесс: создаёт каркас Laravel в репозитории.
+# Запускается, только когда в коммите есть файл .bootstrap, и сам его удаляет.
+name: bootstrap
+
+on:
+  push:
+    branches: [main]
+    paths: ['.bootstrap']
+
+permissions:
+  contents: write
+
+jobs:
+  skeleton:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      - name: Создать каркас Laravel
+        run: |
+          composer create-project laravel/laravel /tmp/app --prefer-dist --no-interaction
+          rsync -a --ignore-existing --exclude .git --exclude vendor --exclude node_modules /tmp/app/ ./
+          rm -f .bootstrap .env database/database.sqlite
+
+      - name: Добавить инструменты проверки
+        run: |
+          composer install --no-interaction --prefer-dist
+          composer require --dev larastan/larastan --no-interaction --prefer-dist
+
+      - name: Зафиксировать каркас
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Каркас Laravel и Larastan" \
+            -m "Сгенерирован процессом bootstrap: в рабочей среде разработки нет доступа к Packagist, поэтому каркас создаётся в CI."
+          git push
