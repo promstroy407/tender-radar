@@ -55,3 +55,18 @@ jobs:
 
       - name: Тесты
         run: php artisan test
+
+  # Зелёный коммит из main переносится в ветку production, откуда его забирает сервер.
+  promote:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Обновить ветку production
+        run: git push origin "${GITHUB_SHA}:refs/heads/production" --force

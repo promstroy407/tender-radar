@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Выкладка новой версии. Запускается процессом deploy от пользователя deploy
-# после того, как код уже скопирован в /opt/tender-radar.
+# Выкладка текущей версии кода из /opt/tender-radar. Запускает pull-deploy.sh.
 set -euo pipefail
 
 cd /opt/tender-radar
@@ -23,4 +22,4 @@ docker compose restart queue scheduler
 
 docker image prune -f >/dev/null
 
-echo "Выкладка завершена: $(git log -1 --format='%h %s' 2>/dev/null || cat REVISION)"
+echo "Выкладка завершена: $(git log -1 --format='%h %s')"
