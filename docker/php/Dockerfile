@@ -12,6 +12,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 
 WORKDIR /var/www/html
+ENV COMPOSER_HOME=/tmp/composer
 
 # Приложение работает не от root.
 RUN usermod -u 1000 www-data && groupmod -g 1000 www-data

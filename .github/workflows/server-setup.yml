@@ -1,0 +1,30 @@
+# Однократная настройка сервера от root. После неё вход root по SSH закрывается.
+name: server-setup
+
+on:
+  workflow_dispatch:
+
+concurrency: server
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ключ SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 "${{ vars.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Скопировать код
+        run: |
+          echo "${GITHUB_SHA}" > REVISION
+          ssh root@${{ vars.SERVER_HOST }} 'install -d /opt/tender-radar'
+          rsync -az --delete --exclude .git --exclude .env --exclude vendor --exclude 'storage/logs/*' \
+            ./ root@${{ vars.SERVER_HOST }}:/opt/tender-radar/
+
+      - name: Настроить сервер
+        run: ssh root@${{ vars.SERVER_HOST }} "bash /opt/tender-radar/scripts/server/setup.sh ${{ vars.APP_DOMAIN }}"
