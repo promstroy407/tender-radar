@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Первичная настройка сервера. Запускается один раз от root из веб-консоли:
 #   bash /opt/tender-radar/scripts/server/setup.sh <домен>
-# К этому моменту репозиторий уже склонирован в /opt/tender-radar ключом /root/deploy_key.
+# К этому моменту репозиторий уже склонирован в /opt/tender-radar ключом /root/dk (создан в консоли).
 # Секреты (ключ доступа к GitHub, пароль БД, APP_KEY) создаются на сервере и не покидают его.
 set -euo pipefail
 
@@ -47,11 +47,11 @@ DEPLOY_HOME="/home/${DEPLOY_USER}"
 
 echo "==> Ключ доступа к GitHub (только чтение) переходит пользователю ${DEPLOY_USER}"
 install -d -m 700 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" "${DEPLOY_HOME}/.ssh"
-if [ -f /root/deploy_key ]; then
-    install -m 600 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" /root/deploy_key "${DEPLOY_HOME}/.ssh/id_ed25519"
-    install -m 644 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" /root/deploy_key.pub "${DEPLOY_HOME}/.ssh/id_ed25519.pub"
-    shred -u /root/deploy_key
-    rm -f /root/deploy_key.pub
+if [ -f /root/dk ]; then
+    install -m 600 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" /root/dk "${DEPLOY_HOME}/.ssh/id_ed25519"
+    install -m 644 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" /root/dk.pub "${DEPLOY_HOME}/.ssh/id_ed25519.pub"
+    shred -u /root/dk
+    rm -f /root/dk.pub
 fi
 ssh-keyscan -t ed25519 github.com 2>/dev/null > /tmp/github_known_hosts
 if ! ssh-keygen -lf /tmp/github_known_hosts | grep -q "${GITHUB_FINGERPRINT}"; then
