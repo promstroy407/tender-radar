@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: tender_radar_test
+          POSTGRES_USER: tender
+          POSTGRES_PASSWORD: tender
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tender -d tender_radar_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: tender_radar_test
+      DB_USERNAME: tender
+      DB_PASSWORD: tender
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, intl, bcmath
+          coverage: none
+          tools: composer:v2
+
+      - name: Зависимости
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Подготовка окружения
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Автоформат (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Статанализ (Larastan)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Тесты
+        run: php artisan test

@@ -1,0 +1,15 @@
+# Caddy сам получает и продлевает https-сертификат Let's Encrypt для APP_DOMAIN.
+{$APP_DOMAIN:localhost} {
+    root * /var/www/html/public
+    encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    php_fastcgi app:9000
+    file_server
+}

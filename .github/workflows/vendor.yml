@@ -1,0 +1,29 @@
+# Вспомогательный процесс: собирает vendor/ как артефакт, чтобы проверки
+# можно было запускать в среде разработки без доступа к Packagist.
+name: vendor
+
+on:
+  workflow_dispatch:
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Зависимости
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
+      - name: Упаковать
+        run: tar czf vendor.tgz vendor
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vendor
+          path: vendor.tgz
+          retention-days: 3
