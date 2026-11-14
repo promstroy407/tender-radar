@@ -20,6 +20,13 @@ class ContractApiTest extends TestCase
         $this->getJson('/api/contracts')->assertUnauthorized();
     }
 
+    public function test_guest_opening_api_in_browser_gets_json_401_not_500(): void
+    {
+        $this->get('/api/contracts', ['Accept' => 'text/html'])
+            ->assertUnauthorized()
+            ->assertJson(['message' => 'Unauthenticated.']);
+    }
+
     public function test_non_admin_gets_403(): void
     {
         $this->actingAs(User::factory()->create())
