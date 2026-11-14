@@ -32,7 +32,7 @@ journalctl -u tender-radar-deploy.service -n 50
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | токен бота от @BotFather |
 | `TELEGRAM_API_URL` | `https://tg.udallenka.ru/<секретный-путь>`; пусто — `https://api.telegram.org` |
-| `TELEGRAM_WEBHOOK_SECRET` | случайная строка, `openssl rand -hex 32` |
+| `TELEGRAM_WEBHOOK_SECRET` | создаётся командой `php artisan telegram:webhook-secret` (значение не выводится) |
 | `TELEGRAM_UPDATES_MODE` | `webhook` (по умолчанию) или `polling` |
 
 После правки `.env`: `docker compose run --rm --no-deps app php artisan optimize`.
