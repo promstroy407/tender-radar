@@ -10,7 +10,6 @@ use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Database\Seeders\RegionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Testing\PendingCommand;
 use Tests\TestCase;
 
 class SeedersAndCommandsTest extends TestCase
@@ -40,7 +39,7 @@ class SeedersAndCommandsTest extends TestCase
 
     public function test_create_admin_command(): void
     {
-        $this->createAdmin()
+        $this->command('app:create-admin', ['email' => 'owner@example.com', 'name' => 'Владелец'])
             ->expectsQuestion('Пароль (не меньше 12 символов)', 'correct-horse-battery')
             ->assertSuccessful();
 
@@ -51,18 +50,10 @@ class SeedersAndCommandsTest extends TestCase
 
     public function test_create_admin_rejects_short_password(): void
     {
-        $this->createAdmin()
+        $this->command('app:create-admin', ['email' => 'owner@example.com', 'name' => 'Владелец'])
             ->expectsQuestion('Пароль (не меньше 12 символов)', 'short')
             ->assertFailed();
 
         $this->assertSame(0, User::query()->count());
-    }
-
-    private function createAdmin(): PendingCommand
-    {
-        $command = $this->artisan('app:create-admin', ['email' => 'owner@example.com', 'name' => 'Владелец']);
-        $this->assertInstanceOf(PendingCommand::class, $command);
-
-        return $command;
     }
 }

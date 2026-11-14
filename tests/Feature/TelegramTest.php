@@ -177,7 +177,7 @@ class TelegramTest extends TestCase
     {
         Http::fake(['*' => Http::response(['ok' => true, 'result' => true])]);
 
-        $this->artisan('telegram:webhook', ['action' => 'set'])->assertSuccessful();
+        $this->command('telegram:webhook', ['action' => 'set'])->assertSuccessful();
 
         Http::assertSent(function (Request $request): bool {
             return str_ends_with($request->url(), '/setWebhook')
@@ -190,7 +190,7 @@ class TelegramTest extends TestCase
     {
         Http::fake();
 
-        $this->artisan('telegram:poll')->assertSuccessful();
+        $this->command('telegram:poll')->assertSuccessful();
 
         Http::assertNothingSent();
     }
@@ -206,7 +206,7 @@ class TelegramTest extends TestCase
             '*/sendMessage' => Http::response(['ok' => true, 'result' => []]),
         ]);
 
-        $this->artisan('telegram:poll')->assertSuccessful();
+        $this->command('telegram:poll')->assertSuccessful();
 
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/deleteWebhook'));
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/getUpdates')
