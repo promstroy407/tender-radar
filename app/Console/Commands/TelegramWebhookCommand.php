@@ -24,10 +24,10 @@ class TelegramWebhookCommand extends Command
     {
         try {
             return match ($this->argument('action')) {
-                'me' => $this->me($bot),
-                'info' => $this->info($bot),
-                'set' => $this->set($bot, $telegram, $config),
-                'delete' => $this->delete($bot),
+                'me' => $this->showMe($bot),
+                'info' => $this->showWebhookInfo($bot),
+                'set' => $this->setWebhook($bot, $telegram, $config),
+                'delete' => $this->deleteWebhook($bot),
                 default => $this->unknownAction(),
             };
         } catch (TelegramApiException|TelegramConfigException $e) {
@@ -37,7 +37,7 @@ class TelegramWebhookCommand extends Command
         }
     }
 
-    private function me(TelegramBotClient $bot): int
+    private function showMe(TelegramBotClient $bot): int
     {
         $result = $bot->call('getMe');
         $username = is_array($result) && is_string($result['username'] ?? null) ? $result['username'] : '?';
@@ -46,7 +46,7 @@ class TelegramWebhookCommand extends Command
         return self::SUCCESS;
     }
 
-    private function info(TelegramBotClient $bot): int
+    private function showWebhookInfo(TelegramBotClient $bot): int
     {
         $result = $bot->call('getWebhookInfo');
         $info = is_array($result) ? $result : [];
@@ -60,7 +60,7 @@ class TelegramWebhookCommand extends Command
         return self::SUCCESS;
     }
 
-    private function set(TelegramBotClient $bot, TelegramConfig $telegram, Config $config): int
+    private function setWebhook(TelegramBotClient $bot, TelegramConfig $telegram, Config $config): int
     {
         $url = rtrim((string) $config->get('app.url'), '/').'/telegram/webhook';
 
@@ -76,7 +76,7 @@ class TelegramWebhookCommand extends Command
         return self::SUCCESS;
     }
 
-    private function delete(TelegramBotClient $bot): int
+    private function deleteWebhook(TelegramBotClient $bot): int
     {
         $bot->call('deleteWebhook');
         $this->line('Webhook снят.');
