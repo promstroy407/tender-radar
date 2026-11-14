@@ -30,6 +30,17 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Telegram Bot API. В московском дата-центре api.telegram.org недоступен,
+    // поэтому запросы идут через пересыльщик: TELEGRAM_API_URL — его адрес
+    // с секретным путём. Пусто — обычный https://api.telegram.org.
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'api_url' => env('TELEGRAM_API_URL'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        // webhook — Telegram сам присылает обновления; polling — запасной режим getUpdates.
+        'updates_mode' => env('TELEGRAM_UPDATES_MODE', 'webhook'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
