@@ -1,0 +1,43 @@
+name: composer-require
+
+# В рабочей среде нет доступа к Packagist, поэтому пакеты добавляются здесь:
+# процесс ставит пакет и кладёт composer.json/composer.lock в ветку deps/<имя>,
+# откуда изменения переносятся в main обычным коммитом (с проверками CI).
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Пакет с версией, например phpoffice/phpspreadsheet:^5.0'
+        required: true
+
+jobs:
+  require:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, intl, bcmath, zip, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Поставить пакет
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: composer require "$PACKAGE" --no-interaction --no-progress --no-scripts
+
+      - name: Сохранить в ветку deps
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          branch="deps/$(echo "$PACKAGE" | tr -c 'a-zA-Z0-9\n' '-')"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add composer.json composer.lock
+          git commit -m "Зависимость: $PACKAGE"
+          git push origin "$branch" --force
