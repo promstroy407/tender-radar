@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title') — Тендер-Радар</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1D5BD8">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Тендер-Радар">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
         :root { --bg:#F3F4F6; --card:#FFFFFF; --ink:#14181F; --muted:#5B6472; --line:#E3E6EA; --accent:#1D5BD8; --ok:#166534; --okbg:#E8F5EC; --err:#B91C1C; --errbg:#FEECEC; }
         * { box-sizing: border-box; }
@@ -51,5 +59,11 @@
     @endif
     @yield('content')
 </main>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+</script>
+@stack('scripts')
 </body>
 </html>
