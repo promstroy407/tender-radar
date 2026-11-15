@@ -66,12 +66,17 @@ class LoginTest extends TestCase
 
     public function test_logged_in_user_sees_home_and_can_logout(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
-        $this->actingAs($user)->get('/')->assertOk()->assertSee($user->name);
+        $this->actingAs($user)->get('/')->assertOk()->assertSee('Тендеры');
         $this->actingAs($user)->get('/login')->assertRedirect('/');
 
         $this->actingAs($user)->post('/logout')->assertRedirect('/login');
         $this->assertGuest();
+    }
+
+    public function test_non_admin_cannot_see_tenders(): void
+    {
+        $this->actingAs(User::factory()->create())->get('/')->assertForbidden();
     }
 }

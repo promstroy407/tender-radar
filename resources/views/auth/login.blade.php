@@ -2,8 +2,14 @@
 
 @section('title', 'Вход')
 
+@section('top')
+    <h1>Тендер-Радар</h1>
+    <p class="sub">Вход по почте и паролю</p>
+@endsection
+
+@section('main_class', 'narrow-bottom')
+
 @section('content')
-    <h1>Вход</h1>
     <form method="post" action="{{ route('login') }}" class="card">
         @csrf
         <label>

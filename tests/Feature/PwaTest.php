@@ -45,7 +45,7 @@ class PwaTest extends TestCase
     public function test_home_page_has_no_install_button(): void
     {
         // Ставится значком браузера в адресной строке, своей кнопки в приложении нет.
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->admin()->create())
             ->get('/')
             ->assertOk()
             ->assertDontSee('Установить приложение')
