@@ -90,7 +90,7 @@ class DocumentReader
      */
     private function readPdf(string $path): array
     {
-        $result = $this->process->timeout(120)->run(['pdftotext', '-layout', '-enc', 'UTF-8', $path, '-']);
+        $result = $this->process->newPendingProcess()->timeout(120)->run(['pdftotext', '-layout', '-enc', 'UTF-8', $path, '-']);
 
         if (! $result->successful()) {
             throw new EstimateReadException('PDF не прочитан: '.trim($result->errorOutput()));
@@ -107,7 +107,7 @@ class DocumentReader
                 continue;
             }
             // Колонки в тексте PDF разделены двумя и более пробелами.
-            $rows[] = array_values(array_map('trim', preg_split('/\s{2,}/u', trim($line)) ?: []));
+            $rows[] = array_map('trim', preg_split('/\s{2,}/u', trim($line)) ?: []);
         }
 
         return $rows;

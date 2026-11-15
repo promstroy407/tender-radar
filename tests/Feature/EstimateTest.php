@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -52,7 +53,7 @@ class EstimateTest extends TestCase
         $file = EstimateFile::query()->sole();
         $this->assertSame(EstimateFileStatus::Parsed, $file->status);
 
-        $lines = EstimateLine::query()->with('priceItem')->orderBy('position')->get();
+        $lines = EstimateLine::query()->with('priceItem')->orderBy('position')->get()->all();
         $this->assertCount(4, $lines);
         $this->assertSame('Монтаж дымового извещателя', $lines[0]->priceItem?->name);
         $this->assertSame('Прокладка кабеля шлейфа', $lines[1]->priceItem?->name);
@@ -114,7 +115,7 @@ class EstimateTest extends TestCase
             'files' => [new UploadedFile($zipPath, 'Документация.zip', 'application/zip', null, true)],
         ]);
 
-        $files = EstimateFile::query()->orderBy('id')->get();
+        $files = EstimateFile::query()->orderBy('id')->get()->all();
         $this->assertCount(3, $files);
         $this->assertSame(EstimateFileStatus::Parsed, $files[0]->status);
         $this->assertSame('Документация.zip → Смета ЭОМ.xlsx', $files[0]->original_name);
@@ -138,7 +139,7 @@ class EstimateTest extends TestCase
             'files' => [UploadedFile::fake()->create('ведомость.pdf', 50, 'application/pdf')],
         ]);
 
-        $lines = EstimateLine::query()->with('priceItem')->orderBy('position')->get();
+        $lines = EstimateLine::query()->with('priceItem')->orderBy('position')->get()->all();
         $this->assertCount(2, $lines);
         $this->assertSame('Монтаж IP-камеры', $lines[0]->priceItem?->name);
         $this->assertSame('Монтаж и настройка видеорегистратора', $lines[1]->priceItem?->name);
@@ -165,7 +166,9 @@ class EstimateTest extends TestCase
         $response = $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/estimate/export');
         $response->assertOk();
 
-        $sheet = IOFactory::load($response->getFile()->getPathname())->getActiveSheet();
+        $base = $response->baseResponse;
+        $this->assertInstanceOf(BinaryFileResponse::class, $base);
+        $sheet = IOFactory::load($base->getFile()->getPathname())->getActiveSheet();
         $this->assertSame(2.5, $sheet->getCell('D5')->getValue());
         $this->assertSame('=IF(F5="",0,ROUND(D5*F5,2))', $sheet->getCell('G5')->getValue());
         // 2,5 × 1 300 = 3 250 ₽ работы + 100,50 ₽ материала.

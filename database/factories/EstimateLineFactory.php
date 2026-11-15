@@ -21,7 +21,7 @@ class EstimateLineFactory extends Factory
     {
         return [
             'estimate_file_id' => EstimateFile::factory(),
-            'estimate_id' => fn (array $attributes): int => EstimateFile::query()->findOrFail($attributes['estimate_file_id'])->estimate_id,
+            'estimate_id' => fn (array $attributes): int => EstimateFile::query()->whereKey((int) $attributes['estimate_file_id'])->value('estimate_id'),
             'position' => 1,
             'name' => 'Извещатель пожарный дымовой ИП 212-141',
             'unit' => 'шт',

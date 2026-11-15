@@ -45,8 +45,9 @@ class EstimateUploadRequest extends FormRequest
      */
     public function uploads(): array
     {
-        $files = $this->file('files');
+        /** @var array<int, UploadedFile> $files */
+        $files = (array) $this->file('files', []);
 
-        return array_values(array_filter(is_array($files) ? $files : [], fn (mixed $file): bool => $file instanceof UploadedFile));
+        return array_values($files);
     }
 }

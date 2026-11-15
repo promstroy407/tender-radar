@@ -48,7 +48,7 @@ class EstimateExporter
             $sheet->setCellValue('C'.$row, $line->unit ?? '');
             // Количество хранится в тысячных — для Excel показываем как обычное число.
             $sheet->setCellValue('D'.$row, $line->quantity_milli / 1000);
-            $sheet->setCellValue('E'.$row, $skip ? 'не считать' : ($line->priceItem?->name ?? 'не сопоставлено'));
+            $sheet->setCellValue('E'.$row, $skip ? 'не считать' : ($line->priceItem === null ? 'не сопоставлено' : $line->priceItem->name));
             $sheet->setCellValue('F'.$row, $price === null ? null : $price / 100);
             $sheet->setCellValue('G'.$row, '=IF(F'.$row.'="",0,ROUND(D'.$row.'*F'.$row.',2))');
             $sheet->setCellValue('H'.$row, $skip || $line->material_kopecks === null ? 0 : $line->material_kopecks / 100);

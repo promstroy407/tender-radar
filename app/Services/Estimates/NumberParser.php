@@ -59,7 +59,8 @@ class NumberParser
 
         // Округление «половина вверх» по следующему знаку после нужных.
         $fraction = str_pad($fraction, $decimals + 1, '0');
-        $result = (int) $whole * (10 ** $decimals) + (int) substr($fraction, 0, $decimals);
+        $factor = $decimals === 3 ? 1000 : 100;
+        $result = (int) $whole * $factor + (int) substr($fraction, 0, $decimals);
         if ((int) $fraction[$decimals] >= 5) {
             $result++;
         }

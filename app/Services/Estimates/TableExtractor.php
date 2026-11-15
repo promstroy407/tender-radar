@@ -134,7 +134,7 @@ class TableExtractor
         return null;
     }
 
-    private function line(string $name, ?string $unit, int $quantityMilli, ?int $materialKopecks): ?ExtractedLine
+    private function line(string $name, ?string $unit, int $quantityMilli, ?int $materialKopecks): ExtractedLine
     {
         // «100 м» × 1,255 = 125,5 м: переводим в единицы прайса.
         $parsed = $this->units->parse($unit);
