@@ -127,7 +127,7 @@ class EstimateTest extends TestCase
     public function test_pdf_is_read_through_pdftotext(): void
     {
         Process::fake([
-            'pdftotext *' => Process::result(
+            '*pdftotext*' => Process::result(
                 "  № п/п   Наименование                                  Ед. изм.     Кол-во\n"
                 ."  1       Монтаж IP-камеры видеонаблюдения              шт           12\n"
                 ."  2       Видеорегистратор сетевой 16 каналов           шт           1\n",
@@ -147,7 +147,7 @@ class EstimateTest extends TestCase
 
     public function test_scanned_pdf_gets_clear_message(): void
     {
-        Process::fake(['pdftotext *' => Process::result('')]);
+        Process::fake(['*pdftotext*' => Process::result('')]);
         $contract = Contract::factory()->create();
 
         $this->actingAs($this->admin())->post('/tenders/'.$contract->id.'/estimate/files', [
