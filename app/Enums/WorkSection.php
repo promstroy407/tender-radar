@@ -40,4 +40,18 @@ enum WorkSection: string
             self::Sks => 'СКС',
         };
     }
+
+    /** Как раздел звучит внутри фразы письма: «готовы взять разделы …». */
+    public function phrase(): string
+    {
+        return match ($this) {
+            self::Eom => 'ЭОМ',
+            self::Ss => 'сети связи',
+            self::Aps => 'пожарная сигнализация',
+            self::Soue => 'оповещение (СОУЭ)',
+            self::Skud => 'СКУД',
+            self::Video => 'видеонаблюдение',
+            self::Sks => 'СКС',
+        };
+    }
 }
