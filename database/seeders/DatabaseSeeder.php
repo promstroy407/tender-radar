@@ -9,11 +9,11 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Базовые справочники. Демо-данные — отдельно: `php artisan db:seed --class=DemoSeeder`.
+     * Базовые справочники: регионы и стартовый прайс работ. Демо-данные — отдельно: `php artisan db:seed --class=DemoSeeder`.
      * Администратор создаётся командой `php artisan app:create-admin`, пароль в файлах не хранится.
      */
     public function run(): void
     {
-        $this->call(RegionSeeder::class);
+        $this->call([RegionSeeder::class, PriceItemSeeder::class]);
     }
 }

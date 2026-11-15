@@ -38,6 +38,7 @@ use Illuminate\Support\Collection;
  * @property-read Company $company
  * @property-read Region $region
  * @property-read Offer|null $offer
+ * @property-read Estimate|null $estimate
  */
 #[Fillable([
     'registry_number', 'law', 'kind', 'region_code', 'subject', 'customer_name', 'customer_inn',
@@ -62,6 +63,14 @@ class Contract extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class, 'region_code', 'code');
+    }
+
+    /**
+     * @return HasOne<Estimate, $this>
+     */
+    public function estimate(): HasOne
+    {
+        return $this->hasOne(Estimate::class);
     }
 
     /**

@@ -5,14 +5,17 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\EisSettingsController;
+use App\Http\Controllers\EstimateController;
 use App\Http\Controllers\KpTemplateController;
 use App\Http\Controllers\OfferController;
+use App\Http\Controllers\PriceController;
 use App\Http\Controllers\SearchSettingsController;
 use App\Http\Controllers\TelegramSettingsController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\TenderController;
 use App\Http\Controllers\WorkController;
 use App\Http\Middleware\VerifyTelegramWebhookSecret;
+use App\Models\Estimate;
 use App\Models\Offer;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +42,20 @@ Route::middleware('auth')->group(function (): void {
             Route::post('messenger', 'messenger')->name('messenger');
             Route::post('dismiss', 'dismiss')->name('dismiss');
         });
+
+    // Быстрая смета тендера — для себя: работа по нашему прайсу, материалы из сметы заказчика.
+    Route::middleware('can:manage,'.Estimate::class)->group(function (): void {
+        Route::get('tenders/{contract}/estimate', [EstimateController::class, 'show'])->name('estimates.show');
+        Route::post('tenders/{contract}/estimate/files', [EstimateController::class, 'upload'])->name('estimates.upload');
+        Route::get('tenders/{contract}/estimate/export', [EstimateController::class, 'export'])->name('estimates.export');
+        Route::post('estimate-files/{file}/reparse', [EstimateController::class, 'reparse'])->name('estimates.files.reparse');
+        Route::delete('estimate-files/{file}', [EstimateController::class, 'destroyFile'])->name('estimates.files.destroy');
+        Route::put('estimate-lines/{line}', [EstimateController::class, 'updateLine'])->name('estimates.lines.update');
+
+        Route::get('prices', [PriceController::class, 'index'])->name('prices');
+        Route::post('prices', [PriceController::class, 'store'])->name('prices.store');
+        Route::put('prices/{item}', [PriceController::class, 'update'])->name('prices.update');
+    });
 
     Route::get('work', [WorkController::class, 'index'])->name('work');
     Route::put('offers/{offer}', [WorkController::class, 'update'])->name('offers.update');

@@ -66,6 +66,24 @@
         <p class="muted" style="font-size:12px">Источник контактов: карточка контракта в ЕИС.</p>
     </section>
 
+    <section class="card">
+        <div class="between">
+            <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Смета — для себя</h3>
+            <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">{{ $estimateSummary && $estimateSummary->linesTotal > 0 ? 'Открыть' : 'Посчитать' }} →</a>
+        </div>
+        @if ($estimateSummary && $estimateSummary->linesTotal > 0)
+            <div class="grid2">
+                <div class="kv"><span class="label">Наша цена</span><b>{{ $money->format($estimateSummary->totalKopecks()) }}</b></div>
+                <div class="kv"><span class="label">От суммы контракта</span><b>{{ $estimateSummary->shareLabel() ?? '—' }}</b></div>
+            </div>
+            @if ($estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice > 0)
+                <p class="muted">Без цены: {{ $estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice }} поз. — проверьте в смете.</p>
+            @endif
+        @else
+            <p class="muted">Загрузите смету или ведомость из документации — прикинем цену работ по вашему прайсу.</p>
+        @endif
+    </section>
+
     <details class="card">
         <summary>Текст письма для этого победителя</summary>
         <p class="letter">{{ $message }}</p>

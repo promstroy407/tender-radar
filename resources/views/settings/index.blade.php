@@ -34,6 +34,7 @@
         <h2 class="section-title">Отправка и подключения</h2>
         <div class="between"><span>Почта для КП</span><span class="badge {{ $mailReady ? 'on' : 'off' }}">{{ $mailReady ? 'подключена' : 'не подключена' }}</span></div>
         <div class="row">
+            <a class="button secondary" href="{{ route('prices') }}">Прайс работ</a>
             <a class="button secondary" href="{{ route('template') }}">Шаблон и лимит писем</a>
             <a class="button secondary" href="{{ route('settings.telegram') }}">Telegram</a>
             <a class="button secondary" href="{{ route('settings.eis') }}">ЕИС</a>
