@@ -51,6 +51,22 @@
             <label class="check"><input type="checkbox" name="clear_api_url" value="1"> Удалить сохранённый адрес</label>
         @endif
 
+        <div>
+            <h2>Как получать сообщения</h2>
+            <p class="muted">Если Telegram не может достучаться до сервера (ошибка «Connection timed out»), выберите опрос.</p>
+        </div>
+        <label class="check">
+            <input type="radio" name="updates_mode" value="polling" @checked($updatesMode === 'polling')>
+            Опрос: сервер сам забирает сообщения через пересыльщик раз в минуту
+        </label>
+        <label class="check">
+            <input type="radio" name="updates_mode" value="webhook" @checked($updatesMode === 'webhook')>
+            Webhook: Telegram сам присылает сообщения на сервер
+        </label>
+        @error('updates_mode')
+            <p class="error">{{ $message }}</p>
+        @enderror
+
         <button type="submit">Сохранить</button>
     </form>
 

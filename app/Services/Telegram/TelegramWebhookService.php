@@ -15,6 +15,11 @@ class TelegramWebhookService
         private readonly string $appUrl,
     ) {}
 
+    public function mode(): TelegramUpdatesMode
+    {
+        return $this->config->updatesMode;
+    }
+
     public function webhookUrl(): string
     {
         return rtrim($this->appUrl, '/').'/telegram/webhook';

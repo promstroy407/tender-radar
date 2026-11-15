@@ -167,6 +167,50 @@ class TelegramSettingsTest extends TestCase
             && $request['secret_token'] === 'hook-secret');
     }
 
+    public function test_admin_switches_to_polling_mode(): void
+    {
+        $this->actingAs($this->admin())
+            ->put('/settings/telegram', ['updates_mode' => 'polling'])
+            ->assertSessionHas('status');
+
+        $this->assertSame('polling', $this->settings()->get(SettingKey::TelegramUpdatesMode));
+        $this->assertSame('polling', $this->app->make(TelegramConfig::class)->updatesMode->value);
+    }
+
+    public function test_unknown_mode_is_rejected(): void
+    {
+        $this->actingAs($this->admin())
+            ->put('/settings/telegram', ['updates_mode' => 'magic'])
+            ->assertSessionHasErrors('updates_mode');
+    }
+
+    public function test_button_in_polling_mode_removes_webhook_instead_of_setting_it(): void
+    {
+        $this->settings()->put(SettingKey::TelegramBotToken, self::TOKEN);
+        $this->settings()->put(SettingKey::TelegramUpdatesMode, 'polling');
+        Http::fake(['*' => Http::response(['ok' => true, 'result' => true])]);
+
+        $this->actingAs($this->admin())->post('/settings/telegram/webhook')
+            ->assertSessionHas('status', fn (string $status): bool => str_starts_with($status, 'Режим опроса'));
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/deleteWebhook'));
+        Http::assertNotSent(fn (Request $request): bool => str_ends_with($request->url(), '/setWebhook'));
+    }
+
+    public function test_poll_command_uses_mode_from_settings(): void
+    {
+        $this->settings()->put(SettingKey::TelegramBotToken, self::TOKEN);
+        $this->settings()->put(SettingKey::TelegramUpdatesMode, 'polling');
+        Http::fake([
+            '*/deleteWebhook' => Http::response(['ok' => true, 'result' => true]),
+            '*/getUpdates' => Http::response(['ok' => true, 'result' => []]),
+        ]);
+
+        $this->command('telegram:poll')->assertSuccessful();
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/getUpdates'));
+    }
+
     private function admin(): User
     {
         return User::factory()->admin()->create();

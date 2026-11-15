@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
             $overrides = $app->make(SettingsService::class);
             $settings['bot_token'] = $overrides->get(SettingKey::TelegramBotToken) ?? ($settings['bot_token'] ?? null);
             $settings['api_url'] = $overrides->get(SettingKey::TelegramApiUrl) ?? ($settings['api_url'] ?? null);
+            $settings['updates_mode'] = $overrides->get(SettingKey::TelegramUpdatesMode) ?? ($settings['updates_mode'] ?? null);
 
             return TelegramConfig::fromArray($settings);
         });

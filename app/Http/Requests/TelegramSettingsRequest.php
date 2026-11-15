@@ -7,8 +7,10 @@ namespace App\Http\Requests;
 use App\Models\Setting;
 use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramConfigException;
+use App\Services\Telegram\TelegramUpdatesMode;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TelegramSettingsRequest extends FormRequest
 {
@@ -29,6 +31,7 @@ class TelegramSettingsRequest extends FormRequest
             'api_url' => ['nullable', 'string', 'max:255', $this->validApiUrl()],
             'clear_bot_token' => ['sometimes', 'boolean'],
             'clear_api_url' => ['sometimes', 'boolean'],
+            'updates_mode' => ['sometimes', Rule::enum(TelegramUpdatesMode::class)],
         ];
     }
 
@@ -54,6 +57,11 @@ class TelegramSettingsRequest extends FormRequest
         $value = trim($this->string('api_url')->toString());
 
         return $value === '' ? null : rtrim($value, '/');
+    }
+
+    public function updatesMode(): ?TelegramUpdatesMode
+    {
+        return $this->enum('updates_mode', TelegramUpdatesMode::class);
     }
 
     private function validApiUrl(): Closure

@@ -9,6 +9,7 @@ use App\Http\Requests\TelegramSettingsRequest;
 use App\Services\SettingsService;
 use App\Services\Telegram\TelegramApiException;
 use App\Services\Telegram\TelegramConfigException;
+use App\Services\Telegram\TelegramUpdatesMode;
 use App\Services\Telegram\TelegramWebhookService;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Container\Container;
@@ -33,6 +34,8 @@ class TelegramSettingsController extends Controller
             'tokenSource' => $this->source(SettingKey::TelegramBotToken, 'services.telegram.bot_token'),
             'apiUrlSource' => $this->source(SettingKey::TelegramApiUrl, 'services.telegram.api_url'),
             'webhookSecretSet' => filled($this->config->get('services.telegram.webhook_secret')),
+            'updatesMode' => $this->settings->get(SettingKey::TelegramUpdatesMode)
+                ?? (string) $this->config->get('services.telegram.updates_mode', TelegramUpdatesMode::Webhook->value),
         ]);
     }
 
@@ -40,6 +43,10 @@ class TelegramSettingsController extends Controller
     {
         $this->apply(SettingKey::TelegramBotToken, $request->botToken(), $request->boolean('clear_bot_token'));
         $this->apply(SettingKey::TelegramApiUrl, $request->apiUrl(), $request->boolean('clear_api_url'));
+
+        if ($request->updatesMode() !== null) {
+            $this->settings->put(SettingKey::TelegramUpdatesMode, $request->updatesMode()->value);
+        }
 
         return redirect()->route('settings.telegram')->with('status', 'Настройки сохранены.');
     }
@@ -54,6 +61,12 @@ class TelegramSettingsController extends Controller
     public function setWebhook(): RedirectResponse
     {
         return $this->withWebhookService(function (TelegramWebhookService $webhook): string {
+            if ($webhook->mode() === TelegramUpdatesMode::Polling) {
+                $webhook->delete();
+
+                return 'Режим опроса: webhook снят, сервер сам забирает сообщения через пересыльщик раз в минуту.';
+            }
+
             $url = $webhook->set();
             $info = $webhook->info();
 
