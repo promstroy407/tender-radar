@@ -42,13 +42,14 @@ class PwaTest extends TestCase
             ->assertSee("navigator.serviceWorker.register('/sw.js')", false);
     }
 
-    public function test_home_page_offers_install(): void
+    public function test_home_page_has_no_install_button(): void
     {
+        // Ставится значком браузера в адресной строке, своей кнопки в приложении нет.
         $this->actingAs(User::factory()->create())
             ->get('/')
             ->assertOk()
-            ->assertSee('Иконка на главном экране')
-            ->assertSee('beforeinstallprompt', false);
+            ->assertDontSee('Установить приложение')
+            ->assertDontSee('beforeinstallprompt', false);
     }
 
     public function test_service_worker_does_not_cache_app_data(): void
