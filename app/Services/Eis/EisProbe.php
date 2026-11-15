@@ -41,6 +41,7 @@ class EisProbe
         ];
 
         try {
+            $this->client->assertConfigured();
             $enums = $this->schemaEnumerations();
             $report['schema'] = $enums;
             $documentType ??= $this->guessContractType($enums['documentType44'] ?? []);

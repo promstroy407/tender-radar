@@ -46,6 +46,12 @@ class EisClient
         return $this->archiveUrls($this->post($xml));
     }
 
+    /** Токен задан? Иначе понятная ошибка до любых запросов. */
+    public function assertConfigured(): void
+    {
+        $this->config->requireToken();
+    }
+
     public function downloadArchive(string $url): string
     {
         try {
