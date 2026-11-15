@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Services\Telegram\TelegramApiException;
-use App\Services\Telegram\TelegramBotClient;
-use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramConfigException;
+use App\Services\Telegram\TelegramWebhookService;
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Config\Repository as Config;
 
 /**
  * Управление ботом: проверка связи, установка и снятие webhook.
@@ -20,14 +18,14 @@ class TelegramWebhookCommand extends Command
 
     protected $description = 'Telegram: проверка бота (me), состояние webhook (info), установка (set), снятие (delete)';
 
-    public function handle(TelegramBotClient $bot, TelegramConfig $telegram, Config $config): int
+    public function handle(TelegramWebhookService $webhook): int
     {
         try {
             return match ($this->argument('action')) {
-                'me' => $this->showMe($bot),
-                'info' => $this->showWebhookInfo($bot),
-                'set' => $this->setWebhook($bot, $telegram, $config),
-                'delete' => $this->deleteWebhook($bot),
+                'me' => $this->showMe($webhook),
+                'info' => $this->showWebhookInfo($webhook),
+                'set' => $this->setWebhook($webhook),
+                'delete' => $this->deleteWebhook($webhook),
                 default => $this->unknownAction(),
             };
         } catch (TelegramApiException|TelegramConfigException $e) {
@@ -37,48 +35,37 @@ class TelegramWebhookCommand extends Command
         }
     }
 
-    private function showMe(TelegramBotClient $bot): int
+    private function showMe(TelegramWebhookService $webhook): int
     {
-        $result = $bot->call('getMe');
-        $username = is_array($result) && is_string($result['username'] ?? null) ? $result['username'] : '?';
-        $this->line('Бот на связи: @'.$username);
+        $this->line('Бот на связи: @'.$webhook->botUsername());
 
         return self::SUCCESS;
     }
 
-    private function showWebhookInfo(TelegramBotClient $bot): int
+    private function showWebhookInfo(TelegramWebhookService $webhook): int
     {
-        $result = $bot->call('getWebhookInfo');
-        $info = is_array($result) ? $result : [];
+        $info = $webhook->info();
 
         $this->table(['Поле', 'Значение'], [
-            ['url', (string) ($info['url'] ?? '')],
-            ['ожидают доставки', (string) ($info['pending_update_count'] ?? 0)],
-            ['последняя ошибка', (string) ($info['last_error_message'] ?? '—')],
+            ['url', $info['url']],
+            ['ожидают доставки', (string) $info['pending']],
+            ['последняя ошибка', $info['last_error'] ?? '—'],
         ]);
 
         return self::SUCCESS;
     }
 
-    private function setWebhook(TelegramBotClient $bot, TelegramConfig $telegram, Config $config): int
+    private function setWebhook(TelegramWebhookService $webhook): int
     {
-        $url = rtrim((string) $config->get('app.url'), '/').'/telegram/webhook';
-
-        $bot->call('setWebhook', [
-            'url' => $url,
-            'secret_token' => $telegram->requireWebhookSecret(),
-            'allowed_updates' => ['message'],
-        ]);
-
-        $this->line('Webhook установлен: '.$url);
+        $this->line('Webhook установлен: '.$webhook->set());
         $this->line('Проверьте доставку: php artisan telegram:webhook info');
 
         return self::SUCCESS;
     }
 
-    private function deleteWebhook(TelegramBotClient $bot): int
+    private function deleteWebhook(TelegramWebhookService $webhook): int
     {
-        $bot->call('deleteWebhook');
+        $webhook->delete();
         $this->line('Webhook снят.');
 
         return self::SUCCESS;

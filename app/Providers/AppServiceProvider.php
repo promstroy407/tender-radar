@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Enums\SettingKey;
+use App\Services\SettingsService;
 use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramUpdateHandler;
+use App\Services\Telegram\TelegramWebhookService;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -23,10 +26,15 @@ class AppServiceProvider extends ServiceProvider
             /** @var array<string, mixed> $settings */
             $settings = (array) $app->make(Config::class)->get('services.telegram', []);
 
+            // Значения из «Настройки → Telegram» (зашифрованы в базе) важнее .env.
+            $overrides = $app->make(SettingsService::class);
+            $settings['bot_token'] = $overrides->get(SettingKey::TelegramBotToken) ?? ($settings['bot_token'] ?? null);
+            $settings['api_url'] = $overrides->get(SettingKey::TelegramApiUrl) ?? ($settings['api_url'] ?? null);
+
             return TelegramConfig::fromArray($settings);
         });
 
-        $this->app->when(TelegramUpdateHandler::class)
+        $this->app->when([TelegramUpdateHandler::class, TelegramWebhookService::class])
             ->needs('$appUrl')
             ->giveConfig('app.url');
     }

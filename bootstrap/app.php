@@ -17,10 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Telegram не знает CSRF-токен; webhook защищён своим секретом.
         $middleware->validateCsrfTokens(except: ['telegram/webhook']);
 
-        // Страницы входа пока нет: для API — сразу 401 в JSON, для остального — на главную.
+        // Для API — сразу 401 в JSON, для страниц — на форму входа.
         $middleware->redirectGuestsTo(
-            fn (Request $request): ?string => $request->is('api/*') ? null : '/',
+            fn (Request $request): ?string => $request->is('api/*') ? null : route('login'),
         );
+        $middleware->redirectUsersTo('/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

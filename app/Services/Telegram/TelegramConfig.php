@@ -42,7 +42,7 @@ final readonly class TelegramConfig
     public function requireToken(): string
     {
         if ($this->botToken === null) {
-            throw new TelegramConfigException('Не задан TELEGRAM_BOT_TOKEN в .env.');
+            throw new TelegramConfigException('Не задан TELEGRAM_BOT_TOKEN: вставьте токен бота в «Настройки → Telegram».');
         }
 
         return $this->botToken;

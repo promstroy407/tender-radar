@@ -8,12 +8,15 @@ use App\Services\Telegram\TelegramApiException;
 use App\Services\Telegram\TelegramBotClient;
 use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramConfigException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class TelegramTest extends TestCase
 {
+    use RefreshDatabase;
+
     private const TOKEN = '123456:SECRET-bot-token';
 
     private const PROXY = 'https://tg.example.test/very-secret-path-123';
