@@ -1,9 +1,12 @@
 # Образ приложения: PHP-FPM с расширениями для PostgreSQL и Redis.
+# gd нужен библиотеке Excel (PhpSpreadsheet), poppler-utils (pdftotext) — чтению смет в PDF.
 FROM php:8.4-fpm-bookworm
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq-dev libicu-dev libzip-dev unzip git curl ca-certificates \
-    && docker-php-ext-install pdo_pgsql intl zip opcache pcntl bcmath \
+        libpng-dev libjpeg62-turbo-dev libfreetype6-dev poppler-utils \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_pgsql intl zip opcache pcntl bcmath gd \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/* /tmp/pear
