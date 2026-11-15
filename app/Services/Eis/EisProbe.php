@@ -156,7 +156,7 @@ class EisProbe
     /** Архив формируется не сразу: пробуем скачать до минуты. */
     private function downloadWhenReady(string $url): string
     {
-        $last = null;
+        $last = new EisException('ЕИС: архив не скачан.');
         for ($attempt = 0; $attempt < 6; $attempt++) {
             try {
                 return $this->client->downloadArchive($url);
@@ -166,7 +166,7 @@ class EisProbe
             }
         }
 
-        throw $last ?? new EisException('ЕИС: архив не скачан.');
+        throw $last;
     }
 
     /**

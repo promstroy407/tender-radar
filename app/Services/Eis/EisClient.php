@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Eis;
 
 use DOMDocument;
+use DOMNode;
+use DOMNodeList;
 use DOMXPath;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Str;
@@ -153,6 +155,9 @@ class EisClient
 
         $urls = [];
         foreach ($xpath?->query('//*[local-name()="archiveUrl"]') ?: [] as $node) {
+            if (! $node instanceof DOMNode) {
+                continue;
+            }
             $url = trim($node->textContent);
             if ($url !== '') {
                 $urls[] = $url;
@@ -164,9 +169,10 @@ class EisClient
 
     private function firstText(string $xml, string $localName): ?string
     {
-        $node = $this->xpath($xml)?->query('//*[local-name()="'.$localName.'"]')?->item(0);
+        $list = $this->xpath($xml)?->query('//*[local-name()="'.$localName.'"]');
+        $node = $list instanceof DOMNodeList ? $list->item(0) : null;
 
-        if ($node === null) {
+        if (! $node instanceof DOMNode) {
             return null;
         }
 
