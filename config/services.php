@@ -41,6 +41,13 @@ return [
         'updates_mode' => env('TELEGRAM_UPDATES_MODE', 'webhook'),
     ],
 
+    // ЕИС (zakupki.gov.ru), сервис отдачи информации getDocsIP. Токен получателя данных
+    // выдаётся на zakupki.gov.ru/pmd через Госуслуги; задаётся на странице «Настройки → ЕИС».
+    'eis' => [
+        'token' => env('EIS_TOKEN'),
+        'url_44' => env('EIS_URL_44', 'https://int44.zakupki.gov.ru/eis-integration/services/getDocsIP'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

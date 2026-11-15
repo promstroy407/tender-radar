@@ -31,8 +31,8 @@ class TelegramSettingsController extends Controller
     public function edit(): View
     {
         return view('settings.telegram', [
-            'tokenSource' => $this->source(SettingKey::TelegramBotToken, 'services.telegram.bot_token'),
-            'apiUrlSource' => $this->source(SettingKey::TelegramApiUrl, 'services.telegram.api_url'),
+            'tokenSource' => $this->settings->source(SettingKey::TelegramBotToken, 'services.telegram.bot_token'),
+            'apiUrlSource' => $this->settings->source(SettingKey::TelegramApiUrl, 'services.telegram.api_url'),
             'webhookSecretSet' => filled($this->config->get('services.telegram.webhook_secret')),
             'updatesMode' => $this->settings->get(SettingKey::TelegramUpdatesMode)
                 ?? (string) $this->config->get('services.telegram.updates_mode', TelegramUpdatesMode::Webhook->value),
@@ -41,8 +41,8 @@ class TelegramSettingsController extends Controller
 
     public function update(TelegramSettingsRequest $request): RedirectResponse
     {
-        $this->apply(SettingKey::TelegramBotToken, $request->botToken(), $request->boolean('clear_bot_token'));
-        $this->apply(SettingKey::TelegramApiUrl, $request->apiUrl(), $request->boolean('clear_api_url'));
+        $this->settings->applyInput(SettingKey::TelegramBotToken, $request->botToken(), $request->boolean('clear_bot_token'));
+        $this->settings->applyInput(SettingKey::TelegramApiUrl, $request->apiUrl(), $request->boolean('clear_api_url'));
 
         if ($request->updatesMode() !== null) {
             $this->settings->put(SettingKey::TelegramUpdatesMode, $request->updatesMode()->value);
@@ -73,25 +73,6 @@ class TelegramSettingsController extends Controller
             return 'Webhook установлен: '.$url.'. Ожидают доставки: '.$info['pending']
                 .'. Последняя ошибка: '.($info['last_error'] ?? 'нет').'.';
         });
-    }
-
-    private function apply(SettingKey $key, ?string $value, bool $clear): void
-    {
-        if ($value !== null) {
-            $this->settings->put($key, $value);
-        } elseif ($clear) {
-            $this->settings->forget($key);
-        }
-    }
-
-    /** Откуда берётся значение: «settings», «env» или null (не задано). */
-    private function source(SettingKey $key, string $configKey): ?string
-    {
-        if ($this->settings->has($key)) {
-            return 'settings';
-        }
-
-        return filled($this->config->get($configKey)) ? 'env' : null;
     }
 
     /**

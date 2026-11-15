@@ -9,4 +9,5 @@ enum SettingKey: string
     case TelegramBotToken = 'telegram.bot_token';
     case TelegramApiUrl = 'telegram.api_url';
     case TelegramUpdatesMode = 'telegram.updates_mode';
+    case EisToken = 'eis.token';
 }

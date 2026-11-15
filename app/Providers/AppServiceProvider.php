@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enums\SettingKey;
+use App\Services\Eis\EisConfig;
 use App\Services\SettingsService;
 use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramUpdateHandler;
@@ -33,6 +34,16 @@ class AppServiceProvider extends ServiceProvider
             $settings['updates_mode'] = $overrides->get(SettingKey::TelegramUpdatesMode) ?? ($settings['updates_mode'] ?? null);
 
             return TelegramConfig::fromArray($settings);
+        });
+
+        $this->app->bind(EisConfig::class, function (Application $app): EisConfig {
+            $config = $app->make(Config::class);
+
+            return new EisConfig(
+                token: $app->make(SettingsService::class)->get(SettingKey::EisToken)
+                    ?? (is_string($config->get('services.eis.token')) ? $config->get('services.eis.token') : null),
+                url44: (string) $config->get('services.eis.url_44'),
+            );
         });
 
         $this->app->when([TelegramUpdateHandler::class, TelegramWebhookService::class])

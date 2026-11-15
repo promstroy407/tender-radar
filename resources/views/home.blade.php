@@ -9,6 +9,7 @@
         @can('update', \App\Models\Setting::class)
             <div class="row">
                 <a class="button" href="{{ route('settings.telegram') }}">Настройки → Telegram</a>
+                <a class="button" href="{{ route('settings.eis') }}">Настройки → ЕИС</a>
             </div>
         @endcan
     </div>

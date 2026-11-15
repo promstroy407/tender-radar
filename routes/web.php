@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\EisSettingsController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TelegramSettingsController;
 use App\Http\Controllers\TelegramWebhookController;
@@ -19,6 +20,15 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::get('/', HomeController::class)->name('home');
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::prefix('settings/eis')->name('settings.eis')
+        ->middleware('can:update,'.Setting::class)
+        ->controller(EisSettingsController::class)
+        ->group(function (): void {
+            Route::get('/', 'edit');
+            Route::put('/', 'update')->name('.update');
+            Route::post('probe', 'probe')->name('.probe');
+        });
 
     Route::prefix('settings/telegram')->name('settings.telegram')
         ->middleware('can:update,'.Setting::class)
