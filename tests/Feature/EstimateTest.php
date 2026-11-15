@@ -61,18 +61,18 @@ class EstimateTest extends TestCase
         $this->assertNull($lines[2]->priceItem);
         $this->assertSame('Монтаж приёмно-контрольного прибора', $lines[3]->priceItem?->name);
 
-        // Работа: 20×300 + 150×30 + 1×1000 = 11 500 ₽; материалы: 15 000 + 9 000,50 + 50 000 = 74 000,50 ₽.
+        // Только работы: 20×300 + 150×30 + 1×1000 = 11 500 ₽ из 100 000 ₽ контракта. Материалы не считаются.
+        $this->assertSame(1_500_000, $lines[0]->material_kopecks);
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/estimate')
             ->assertOk()
             ->assertSee("11\u{00A0}500\u{00A0}₽")
-            ->assertSee("74\u{00A0}000,50\u{00A0}₽")
-            ->assertSee("85\u{00A0}500,50\u{00A0}₽")
-            ->assertSee('85,5 %')
+            ->assertDontSee("74\u{00A0}000,50")
+            ->assertSee('11,5 %')
             ->assertSee('не сопоставлено 1');
 
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id)
             ->assertOk()
-            ->assertSee("85\u{00A0}500,50\u{00A0}₽");
+            ->assertSee("11\u{00A0}500\u{00A0}₽");
     }
 
     public function test_line_can_be_matched_manually_or_skipped(): void
@@ -171,8 +171,9 @@ class EstimateTest extends TestCase
         $sheet = IOFactory::load($base->getFile()->getPathname())->getActiveSheet();
         $this->assertSame(2.5, $sheet->getCell('D5')->getValue());
         $this->assertSame('=IF(F5="",0,ROUND(D5*F5,2))', $sheet->getCell('G5')->getValue());
-        // 2,5 × 1 300 = 3 250 ₽ работы + 100,50 ₽ материала.
-        $this->assertEqualsWithDelta(3350.5, $sheet->getCell('I6')->getCalculatedValue(), 0.001);
+        // 2,5 × 1 300 = 3 250 ₽ работы; материал в выгрузку не идёт.
+        $this->assertEqualsWithDelta(3250.0, $sheet->getCell('G6')->getCalculatedValue(), 0.001);
+        $this->assertNull($sheet->getCell('H5')->getValue());
     }
 
     public function test_upload_validation_and_access(): void

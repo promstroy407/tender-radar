@@ -10,7 +10,8 @@ use App\Models\EstimateLine;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Считает быструю смету: работа — по нашему прайсу, материалы — из сметы заказчика.
+ * Считает быструю смету: только работы по нашему прайсу. Материалы считаются отдельно
+ * (стоимость материала из сметы заказчика сохраняется в позиции для этого).
  */
 class EstimateCalculator
 {
@@ -19,7 +20,7 @@ class EstimateCalculator
      */
     public function summarize(Estimate $estimate, Collection $lines): EstimateSummary
     {
-        $work = $material = $priced = $unmatched = $noPrice = $skipped = 0;
+        $work = $priced = $unmatched = $noPrice = $skipped = 0;
 
         foreach ($lines as $line) {
             if ($line->match === LineMatch::Skip) {
@@ -28,7 +29,6 @@ class EstimateCalculator
                 continue;
             }
 
-            $material += $line->material_kopecks ?? 0;
             $lineWork = $line->workKopecks();
 
             if ($line->priceItem === null) {
@@ -43,7 +43,6 @@ class EstimateCalculator
 
         return new EstimateSummary(
             workKopecks: $work,
-            materialKopecks: $material,
             contractKopecks: $estimate->contract->amount_kopecks,
             linesTotal: $lines->count(),
             linesPriced: $priced,

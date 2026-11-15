@@ -9,7 +9,7 @@
         </a>
         <div>
             <h1 style="font-size:17px;font-weight:600">Быстрая смета</h1>
-            <p class="sub" style="font-size:12px">Для себя: работа по нашему прайсу, материалы — из сметы заказчика</p>
+            <p class="sub" style="font-size:12px">Для себя: только работы по нашему прайсу</p>
         </div>
     </div>
 @endsection
@@ -21,13 +21,11 @@
 
         @if ($summary && $summary->linesTotal > 0)
             <div class="grid2">
-                <div class="kv"><span class="label">Работа по прайсу</span><b>{{ $money->format($summary->workKopecks) }}</b></div>
-                <div class="kv"><span class="label">Материалы по смете</span><b>{{ $money->format($summary->materialKopecks) }}</b></div>
-                <div class="kv"><span class="label">Наша цена</span><b style="font-size:17px">{{ $money->format($summary->totalKopecks()) }}</b></div>
+                <div class="kv"><span class="label">Наши работы</span><b style="font-size:17px">{{ $money->format($summary->workKopecks) }}</b></div>
                 <div class="kv"><span class="label">Сумма контракта</span><b>{{ $money->format($summary->contractKopecks) }}</b></div>
             </div>
             @if ($summary->shareLabel())
-                <p class="muted" style="color:var(--ink2)">Наша цена — <b>{{ $summary->shareLabel() }}</b> от суммы контракта.</p>
+                <p class="muted" style="color:var(--ink2)">Наши работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в ней есть и материалы).</p>
             @endif
             <p class="muted">
                 Позиций: {{ $summary->linesTotal }} · посчитано {{ $summary->linesPriced }}
@@ -35,7 +33,7 @@
                 @if ($summary->linesNoPrice) · <b style="color:var(--hot)">нет цены в прайсе {{ $summary->linesNoPrice }}</b>@endif
                 @if ($summary->linesSkipped) · не считаем {{ $summary->linesSkipped }}@endif
             </p>
-            <p class="muted" style="font-size:12px">Цены прайса — «от», с сайта es12.ru; материалы учтены, только если в смете заказчика есть их стоимость. Это прикидка, не смета для отправки.</p>
+            <p class="muted" style="font-size:12px">Цены прайса — «от», с сайта es12.ru. Материалы не считаем — они отдельно. Это прикидка, не смета для отправки.</p>
             <div class="row">
                 <a class="button secondary" href="{{ route('estimates.export', $contract) }}">Скачать в Excel</a>
                 <a class="button secondary" href="{{ route('prices') }}">Прайс работ</a>
@@ -119,9 +117,6 @@
                             <b style="color:var(--hot)">нет цены</b>
                         @else
                             <b style="color:var(--hot)">не сопоставлено</b>
-                        @endif
-                        @if ($line->material_kopecks && $line->match->value !== 'skip')
-                            · материал {{ $money->format($line->material_kopecks) }}
                         @endif
                     </span>
                 </div>

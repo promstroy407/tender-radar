@@ -73,14 +73,14 @@
         </div>
         @if ($estimateSummary && $estimateSummary->linesTotal > 0)
             <div class="grid2">
-                <div class="kv"><span class="label">Наша цена</span><b>{{ $money->format($estimateSummary->totalKopecks()) }}</b></div>
+                <div class="kv"><span class="label">Наши работы</span><b>{{ $money->format($estimateSummary->workKopecks) }}</b></div>
                 <div class="kv"><span class="label">От суммы контракта</span><b>{{ $estimateSummary->shareLabel() ?? '—' }}</b></div>
             </div>
             @if ($estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice > 0)
                 <p class="muted">Без цены: {{ $estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice }} поз. — проверьте в смете.</p>
             @endif
         @else
-            <p class="muted">Загрузите смету или ведомость из документации — прикинем цену работ по вашему прайсу.</p>
+            <p class="muted">Загрузите смету или ведомость из документации — прикинем стоимость работ по вашему прайсу.</p>
         @endif
     </section>
 

@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Estimates;
 
-/** Итоги быстрой сметы. Всё в копейках, процент — в десятых долях. */
+/** Итоги быстрой сметы: только работы (материалы считаются отдельно). Всё в копейках, процент — в десятых долях. */
 final readonly class EstimateSummary
 {
     public function __construct(
         public int $workKopecks,
-        public int $materialKopecks,
         public int $contractKopecks,
         public int $linesTotal,
         public int $linesPriced,
@@ -18,19 +17,14 @@ final readonly class EstimateSummary
         public int $linesSkipped,
     ) {}
 
-    public function totalKopecks(): int
-    {
-        return $this->workKopecks + $this->materialKopecks;
-    }
-
-    /** Наша цена от суммы контракта, в десятых процента (523 = 52,3 %). null — сравнивать не с чем. */
+    /** Наши работы от суммы контракта (она включает и материалы), в десятых процента (523 = 52,3 %). null — сравнивать не с чем. */
     public function shareOfContractPermille(): ?int
     {
-        if ($this->contractKopecks <= 0 || $this->totalKopecks() === 0) {
+        if ($this->contractKopecks <= 0 || $this->workKopecks === 0) {
             return null;
         }
 
-        return intdiv($this->totalKopecks() * 1000 + intdiv($this->contractKopecks, 2), $this->contractKopecks);
+        return intdiv($this->workKopecks * 1000 + intdiv($this->contractKopecks, 2), $this->contractKopecks);
     }
 
     public function shareLabel(): ?string
