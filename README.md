@@ -6,6 +6,13 @@
 
 Открывается как Telegram Mini App и как обычный сайт в браузере.
 
+## Документы
+
+- `docs/project.md` — цель и принятые решения
+- `docs/journal.md` — журнал работ по дням
+- `docs/server.md` — сервер, выкладка, бэкапы, Telegram
+- `docs/kp-template.md` — шаблон письма с КП
+
 ## Стек
 
 Laravel, PostgreSQL, Redis, Docker. Один монолит.

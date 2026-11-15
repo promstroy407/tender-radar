@@ -4,6 +4,10 @@
 - Адрес приложения: https://tender.es12.ru (A-запись `tender` в зоне es12.ru, DNSmanager FirstVDS).
 - Каталог: `/opt/tender-radar`, пользователь `deploy`. Секреты — только в `/opt/tender-radar/.env`.
 - Вход: веб-консоль FirstVDS (root). SSH по паролю и root по SSH закрыты.
+- В веб-консоли не работает вставка из буфера, а при наборе через автоматизацию не проходят
+  символы с Shift (`_ @ : | & "`). Обход: `printf '\072'` → «:», `printf '\100'` → «@»
+  внутри обратных кавычек. Секреты в консоль не вводим — для этого страница настроек.
+- Администратор приложения: `docker compose exec app php artisan app:create-admin <почта> <имя>`.
 
 ## Выкладка
 
@@ -48,6 +52,10 @@ docker compose run --rm --no-deps app php artisan telegram:webhook info   # см
 
 Webhook идёт напрямую от Telegram на https://tender.es12.ru/telegram/webhook и проверяет
 заголовок `X-Telegram-Bot-Api-Secret-Token` (без него — 403).
+
+**Сейчас включён режим опроса** (с 15.11.2026): входящие от Telegram к серверу
+не доходят («Connection timed out»). Токен, адрес пересыльщика и режим задаются на странице
+«Настройки → Telegram» (хранятся в базе зашифрованными и важнее значений из `.env`).
 
 Если в `info` видны ошибки доставки и сообщения боту не доходят — запасной режим:
 `TELEGRAM_UPDATES_MODE=polling` в `.env`, затем `optimize`. Планировщик раз в минуту
