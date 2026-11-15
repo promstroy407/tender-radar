@@ -11,4 +11,14 @@ enum ContractFilter: string
     case Hot = 'hot';
     case Profile = 'profile';
     case General = 'general';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::All => 'Все',
+            self::Hot => 'Горячие',
+            self::Profile => 'Профильные',
+            self::General => 'Генподряд',
+        };
+    }
 }

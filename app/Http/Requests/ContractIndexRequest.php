@@ -32,7 +32,7 @@ class ContractIndexRequest extends FormRequest
         ];
     }
 
-    public function toSearch(): ContractSearch
+    public function toSearch(bool $onlyNew = false): ContractSearch
     {
         /** @var list<string> $regions */
         $regions = array_values((array) $this->validated('regions', []));
@@ -42,6 +42,7 @@ class ContractIndexRequest extends FormRequest
             regionCodes: $regions,
             minAmountKopecks: $this->has('min_amount_kopecks') ? $this->integer('min_amount_kopecks') : null,
             perPage: $this->integer('per_page', 20),
+            onlyNew: $onlyNew,
         );
     }
 }

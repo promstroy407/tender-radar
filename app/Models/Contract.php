@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -36,6 +37,7 @@ use Illuminate\Support\Collection;
  * @property int $company_id
  * @property-read Company $company
  * @property-read Region $region
+ * @property-read Offer|null $offer
  */
 #[Fillable([
     'registry_number', 'law', 'kind', 'region_code', 'subject', 'customer_name', 'customer_inn',
@@ -60,6 +62,14 @@ class Contract extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class, 'region_code', 'code');
+    }
+
+    /**
+     * @return HasOne<Offer, $this>
+     */
+    public function offer(): HasOne
+    {
+        return $this->hasOne(Offer::class);
     }
 
     /**
