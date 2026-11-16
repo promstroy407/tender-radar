@@ -219,10 +219,12 @@ class NormativesTest extends TestCase
         Http::fake(function (Request $request) use ($children) {
             $url = $request->url();
             parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
+            $guid = is_string($q['parentGuid'] ?? null) ? $q['parentGuid'] : '';
+            $subject = is_string($q['subjectId'] ?? null) ? (int) $q['subjectId'] : 0;
 
             return match (true) {
-                str_contains($url, 'NormLegalDocPublished') => Http::response([(string) $q['parentGuid'] => $children[(string) $q['parentGuid']] ?? []]),
-                str_contains($url, 'PriceZones') => Http::response([['id' => 1000 + (int) $q['subjectId'], 'name' => 'Зона']]),
+                str_contains($url, 'NormLegalDocPublished') => Http::response([$guid => $children[$guid] ?? []]),
+                str_contains($url, 'PriceZones') => Http::response([['id' => 1000 + $subject, 'name' => 'Зона']]),
                 str_contains($url, 'Periods') => Http::response([['id' => 427, 'name' => '3 квартал 2026 г.'], ['id' => 426, 'name' => '2 квартал 2026 г.']]),
                 str_contains($url, 'RimWorkerSalaryRegistry') => Http::response(['total' => 2, 'items' => [
                     ['code' => '1-100-38', 'salary' => '346.40'],
