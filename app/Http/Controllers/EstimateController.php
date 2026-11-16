@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\Estimates\EstimateCalculator;
 use App\Services\Estimates\EstimateExporter;
 use App\Services\Estimates\EstimateService;
+use App\Services\Estimates\PriceResolver;
 use App\Services\MoneyFormatter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,6 +37,7 @@ class EstimateController extends Controller
         private readonly EstimateCalculator $calculator,
         private readonly EstimateExporter $exporter,
         private readonly MoneyFormatter $money,
+        private readonly PriceResolver $prices,
     ) {}
 
     public function show(Request $request, Contract $contract): View
@@ -59,6 +61,13 @@ class EstimateController extends Controller
                 ->withQueryString();
         }
 
+        // Цена за единицу каждой позиции прайса в регионе тендера: по ГЭСН или вручную.
+        $items = PriceItem::query()->where('is_active', true)->orderBy('name')->get();
+        $unitPrices = [];
+        foreach ($items as $item) {
+            $unitPrices[$item->id] = $this->prices->unitPrice($item, $contract->region_code);
+        }
+
         return view('estimates.show', [
             'contract' => $contract,
             'estimate' => $estimate,
@@ -66,8 +75,8 @@ class EstimateController extends Controller
             'lines' => $lines,
             'attention' => $attention,
             'pending' => $estimate?->files->contains(fn (EstimateFile $f): bool => $f->status === EstimateFileStatus::Pending) ?? false,
-            'priceGroups' => PriceItem::query()->where('is_active', true)->orderBy('name')->get()
-                ->groupBy(fn (PriceItem $item): string => $item->section->value),
+            'priceGroups' => $items->groupBy(fn (PriceItem $item): string => $item->section->value),
+            'unitPrices' => $unitPrices,
             'sections' => PriceSection::cases(),
             'money' => $this->money,
         ]);

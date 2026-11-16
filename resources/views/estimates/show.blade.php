@@ -37,7 +37,7 @@
                     @if ($summary->linesNoPrice) · <b style="color:var(--hot)">без цены {{ $summary->linesNoPrice }}</b>@endif
                     @if ($summary->linesSkipped) · не считаем {{ $summary->linesSkipped }}@endif
                 </p>
-                <p class="muted" style="font-size:12px">Ведомости без цен пока не считаются по нормативам — это следующий этап. Свои цены можно вписать в «Прайс работ».</p>
+                <p class="muted" style="font-size:12px">Позиции ведомостей считаются по нормам ГЭСН и ставкам труда региона «{{ $contract->region->name }}» (ФГИС ЦС) с накладными расходами и сметной прибылью, без машин и материалов. Где у работы нет нормы — по цене из «Прайса работ».</p>
             @endif
             <p class="muted" style="font-size:12px">Материалы не считаем — они отдельно. Это прикидка, не смета для отправки.</p>
             <div class="row">
@@ -112,7 +112,7 @@
         </nav>
 
         @forelse ($lines as $line)
-            @php($work = $line->workKopecks())
+            @php($work = $line->workKopecks($unitPrices[$line->price_item_id] ?? null))
             <article class="card" id="line-{{ $line->id }}" style="gap:8px">
                 <p style="margin:0;font-size:14px;line-height:1.4">{{ $line->name }}</p>
                 <div class="between muted">
@@ -144,7 +144,7 @@
                                 <optgroup label="{{ $section->label() }}">
                                     @foreach ($priceGroups[$section->value] as $item)
                                         <option value="{{ $item->id }}" @selected($line->price_item_id === $item->id && $line->match->value !== 'skip')>
-                                            {{ $item->name }} ({{ $item->work_price_kopecks !== null ? $money->format($item->work_price_kopecks) : 'нет цены' }}/{{ $item->unit }})
+                                            {{ $item->name }} ({{ ($unitPrices[$item->id] ?? null) !== null ? $money->format($unitPrices[$item->id]) : 'нет цены' }}/{{ $item->unit }})
                                         </option>
                                     @endforeach
                                 </optgroup>

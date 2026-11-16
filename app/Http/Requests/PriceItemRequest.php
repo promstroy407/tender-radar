@@ -45,6 +45,7 @@ class PriceItemRequest extends FormRequest
             'unit' => ['required', Rule::in(self::UNITS)],
             // Пусто — цена не задана; иначе рубли, можно с копейками: «1300» или «1300,50».
             'price_rubles' => ['nullable', 'regex:/^\d{1,9}([.,]\d{1,2})?$/'],
+            'gesn_code' => ['nullable', 'regex:/^\d{2}-\d{2}-\d{3}-\d{2}$/'],
             'keywords' => ['required', 'string', 'max:2000'],
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -58,11 +59,12 @@ class PriceItemRequest extends FormRequest
         return [
             'price_rubles.regex' => 'Цена — число рублей, например 1300 или 1300,50.',
             'name.unique' => 'Такая позиция с этой единицей уже есть.',
+            'gesn_code.regex' => 'Шифр нормы вида 08-02-147-01.',
         ];
     }
 
     /**
-     * @return array{section: PriceSection, name: string, unit: string, work_price_kopecks: int|null, keywords: string, is_active: bool}
+     * @return array{section: PriceSection, name: string, unit: string, work_price_kopecks: int|null, gesn_code: string|null, keywords: string, is_active: bool}
      */
     public function toAttributes(): array
     {
@@ -73,6 +75,7 @@ class PriceItemRequest extends FormRequest
             'name' => trim($this->string('name')->toString()),
             'unit' => $this->string('unit')->toString(),
             'work_price_kopecks' => $price === '' ? null : app(NumberParser::class)->toKopecks($price),
+            'gesn_code' => $this->filled('gesn_code') ? $this->string('gesn_code')->toString() : null,
             'keywords' => mb_strtolower(trim($this->string('keywords')->toString())),
             'is_active' => $this->boolean('is_active'),
         ];

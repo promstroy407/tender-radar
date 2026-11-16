@@ -42,6 +42,26 @@
     </section>
 
     <section class="card">
+        <h2 class="section-title">Нормативы ГЭСН и ставки труда (ФГИС ЦС)</h2>
+        @if ($normatives === null)
+            <p class="muted">Ещё не загружались. Сервер загружает их сам после выкладки и раз в неделю.</p>
+        @elseif (($normatives['ok'] ?? false) === true)
+            <p class="muted">Загружено {{ $normatives['finished_at'] ?? '' }}: норм — {{ $normatives['norms'] ?? 0 }}.</p>
+            @foreach ($regions as $region)
+                @if (isset($normatives['periods'][$region->code]))
+                    <div class="between" style="font-size:14px"><span>{{ $region->name }}</span><span class="muted">ставки за {{ $normatives['periods'][$region->code] }}</span></div>
+                @endif
+            @endforeach
+        @else
+            <div class="flash err" role="alert">Последняя загрузка {{ $normatives['finished_at'] ?? '' }} не удалась: {{ $normatives['error'] ?? 'неизвестная ошибка' }}</div>
+        @endif
+        <form method="post" action="{{ route('settings.normatives') }}">
+            @csrf
+            <button type="submit" class="secondary">Обновить сейчас</button>
+        </form>
+    </section>
+
+    <section class="card">
         <h2 class="section-title">Демо-тендеры</h2>
         <p class="muted">Вымышленные тендеры с пометкой «[Демо]», чтобы посмотреть экраны до подключения ЕИС.</p>
         @if ($demoLoaded)

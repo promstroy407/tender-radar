@@ -20,7 +20,7 @@
 
 @section('content')
     <div class="card">
-        <p class="muted">Цены взяты с сайта es12.ru/ceny 15 ноября 2026 — там они «от», для частных клиентов. Поправьте под тендерные объекты. Пустая цена — позиция узнаётся, но не считается.</p>
+        <p class="muted">Цена работы считается по норме ГЭСН: затраты труда × сметная цена часа рабочего в регионе тендера (ФГИС ЦС) + накладные расходы и сметная прибыль. Без машин (≈2 % в электромонтаже) и материалов. Нормы подобраны начерно — проверьте. Если нормы нет, используется цена, вписанная вручную.</p>
         <p class="muted"><b>Ключевые слова</b> — через запятую. Каждая фраза — слова, которые все должны быть в строке сметы (можно начало слова: «извещател дым»). Побеждает самая подробная фраза.</p>
     </div>
 
@@ -34,10 +34,30 @@
             <details class="card" id="item-{{ $item->id }}" style="gap:6px">
                 <summary style="justify-content:space-between;gap:8px">
                     <span style="font-size:14px;{{ $item->is_active ? '' : 'color:var(--muted);text-decoration:line-through' }}">{{ $item->name }}</span>
-                    <span style="flex:none;font-size:13px;{{ $item->work_price_kopecks === null ? 'color:var(--hot)' : '' }}">
-                        {{ $item->work_price_kopecks === null ? 'нет цены' : $rubles($item->work_price_kopecks).' ₽' }}/{{ $item->unit }}
+                    @php($regionPrices = array_filter($normative[$item->id] ?? []))
+                    <span style="flex:none;font-size:13px;{{ $regionPrices === [] && $item->work_price_kopecks === null ? 'color:var(--hot)' : '' }}">
+                        @if ($regionPrices !== [])
+                            ГЭСН {{ $item->gesn_code }}
+                        @elseif ($item->work_price_kopecks !== null)
+                            {{ $rubles($item->work_price_kopecks) }} ₽/{{ $item->unit }}
+                        @elseif ($item->gesn_code)
+                            ГЭСН {{ $item->gesn_code }} — ждём загрузку
+                        @else
+                            нет цены
+                        @endif
                     </span>
                 </summary>
+                @if ($regionPrices !== [])
+                    <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                        @foreach ($regions as $region)
+                            @if ($price = $normative[$item->id][$region->code] ?? null)
+                                <div class="between"><span class="muted">{{ $region->name }}</span><b>{{ $money->format($price->kopecksPerUnit) }}/{{ $item->unit }}</b></div>
+                            @endif
+                        @endforeach
+                        @php($any = reset($regionPrices))
+                        <p class="muted" style="font-size:12px">НР {{ $any->overheadPercent }} %, СП {{ $any->profitPercent }} % от оплаты труда; ставки за {{ $any->period }}.</p>
+                    </div>
+                @endif
                 <form method="post" action="{{ route('prices.update', $item) }}" style="display:flex;flex-direction:column;gap:10px">
                     @csrf
                     @method('put')

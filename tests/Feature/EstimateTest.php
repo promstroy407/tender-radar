@@ -13,6 +13,7 @@ use App\Models\EstimateLine;
 use App\Models\PriceItem;
 use App\Models\User;
 use App\Services\Estimates\PriceMatcher;
+use App\Services\Estimates\PriceResolver;
 use Database\Seeders\PriceItemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -154,12 +155,15 @@ class EstimateTest extends TestCase
 
         $line->refresh()->load('priceItem');
         $this->assertSame(LineMatch::Manual, $line->match);
-        $this->assertSame(390_000, $line->workKopecks());
+        $this->assertNotNull($line->priceItem);
+        // Норм в базе нет — берётся цена, вписанная вручную: 3 × 1 300 ₽.
+        $unit = $this->app->make(PriceResolver::class)->unitPrice($line->priceItem, $line->file->estimate->contract->region_code);
+        $this->assertSame(390_000, $line->workKopecks($unit));
 
         $this->actingAs($this->admin())->put('/estimate-lines/'.$line->id, ['price_item' => 'skip']);
         $line->refresh();
         $this->assertSame(LineMatch::Skip, $line->match);
-        $this->assertNull($line->workKopecks());
+        $this->assertNull($line->workKopecks(130_000));
 
         $this->actingAs($this->admin())->put('/estimate-lines/'.$line->id, ['price_item' => '999999'])
             ->assertSessionHasErrors('price_item');

@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SearchSettingsRequest;
+use App\Jobs\SyncNormatives;
 use App\Services\DemoDataService;
 use App\Services\MoneyFormatter;
+use App\Services\Normatives\NormativesSync;
 use App\Services\OfferSender;
 use App\Services\SearchSettingsService;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -22,6 +25,8 @@ class SearchSettingsController extends Controller
         private readonly DemoDataService $demo,
         private readonly OfferSender $sender,
         private readonly MoneyFormatter $money,
+        private readonly NormativesSync $normatives,
+        private readonly Dispatcher $bus,
     ) {}
 
     public function edit(): View
@@ -34,6 +39,7 @@ class SearchSettingsController extends Controller
             'minAmountFormatted' => $this->money->format($minKopecks),
             'demoLoaded' => $this->demo->exists(),
             'mailReady' => $this->sender->mailConfigured(),
+            'normatives' => $this->normatives->lastStatus(),
         ]);
     }
 
@@ -42,6 +48,13 @@ class SearchSettingsController extends Controller
         $this->search->apply($request->regionCodes(), $request->minAmountKopecks());
 
         return redirect()->route('settings')->with('status', 'Настройки поиска сохранены.');
+    }
+
+    public function syncNormatives(): RedirectResponse
+    {
+        $this->bus->dispatch(new SyncNormatives);
+
+        return redirect()->route('settings')->with('status', 'Загрузка нормативов запущена — займёт несколько минут. Обновите страницу позже.');
     }
 
     public function loadDemo(): RedirectResponse

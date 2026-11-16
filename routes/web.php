@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function (): void {
 
         Route::get('settings', [SearchSettingsController::class, 'edit'])->name('settings');
         Route::put('settings', [SearchSettingsController::class, 'update'])->name('settings.update');
+        Route::post('settings/normatives', [SearchSettingsController::class, 'syncNormatives'])->name('settings.normatives');
         Route::post('settings/demo', [SearchSettingsController::class, 'loadDemo'])->name('settings.demo');
         Route::delete('settings/demo', [SearchSettingsController::class, 'removeDemo'])->name('settings.demo.remove');
     });

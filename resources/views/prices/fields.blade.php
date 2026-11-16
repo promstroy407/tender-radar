@@ -13,7 +13,7 @@
     <input type="text" name="name" value="{{ $item?->name }}" maxlength="255" required>
 </label>
 <div class="grid2">
-    <label>Цена работы, ₽
+    <label>Цена вручную, ₽ (если нет нормы)
         <input type="text" name="price_rubles" value="{{ $priceText }}" inputmode="decimal" placeholder="не задана">
     </label>
     <label>Единица
@@ -24,6 +24,9 @@
         </select>
     </label>
 </div>
+<label>Норма ГЭСН (шифр)
+    <input type="text" name="gesn_code" value="{{ $item?->gesn_code }}" maxlength="20" placeholder="например, 08-02-147-01" inputmode="numeric">
+</label>
 <label>Ключевые слова
     <textarea name="keywords" rows="2" maxlength="2000" required>{{ $item?->keywords }}</textarea>
 </label>
