@@ -1,0 +1,33 @@
+name: parser-tools
+
+# Набор библиотек (только открытый код) для проверки разбора смет вне Docker:
+# в рабочей среде нет доступа к Packagist. Документы заказчика сюда не попадают —
+# архив библиотек скачивается и разбор запускается там, где лежат файлы.
+on:
+  workflow_dispatch:
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, zip, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Библиотеки для разбора
+        run: |
+          mkdir tools && cd tools
+          composer init --name=tender/parser-tools --no-interaction
+          composer config platform.php 8.3.6
+          composer require --no-interaction --no-progress \
+            "phpoffice/phpspreadsheet:^5.0" "illuminate/database:^13.0" \
+            "illuminate/process:^13.0" "illuminate/support:^13.0"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parser-tools
+          path: tools/vendor
+          retention-days: 1
