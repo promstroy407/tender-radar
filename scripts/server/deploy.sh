@@ -20,6 +20,9 @@ docker compose run --rm --no-deps app php artisan optimize
 docker compose up -d --remove-orphans
 docker compose restart queue scheduler
 
+# Нормативы ГЭСН и ставки труда: если ещё не загружены или устарели — в очередь (не блокирует выкладку).
+docker compose exec -T app php artisan normatives:sync --if-stale=7 || true
+
 docker image prune -f >/dev/null
 
 echo "Выкладка завершена: $(git log -1 --format='%h %s')"

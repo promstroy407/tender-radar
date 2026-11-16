@@ -12,3 +12,6 @@ Artisan::command('inspire', function () {
 
 // Запасной режим Telegram (TELEGRAM_UPDATES_MODE=polling); в режиме webhook команда сразу выходит.
 Schedule::command('telegram:poll')->everyMinute()->withoutOverlapping();
+
+// Нормативы ГЭСН и ставки труда (ФГИС ЦС публикует их поквартально): раз в неделю, ночью.
+Schedule::command('normatives:sync --if-stale=7')->dailyAt('03:17')->withoutOverlapping();
