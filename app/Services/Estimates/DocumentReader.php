@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Estimates;
 
 use Illuminate\Process\Factory as ProcessFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
@@ -20,6 +21,9 @@ class DocumentReader
 
     /** Не читаем больше строк с одного листа: сметы крупнее — редкость, а память не бесконечна. */
     private const MAX_ROWS = 20000;
+
+    /** Смете хватает трёх десятков колонок; оформление «на весь лист» (до XFD) не читаем. */
+    private const MAX_COLUMNS = 40;
 
     public function __construct(
         private readonly ProcessFactory $process,
@@ -65,14 +69,19 @@ class DocumentReader
 
         $tables = [];
         foreach ($book->getAllSheets() as $sheet) {
+            $lastRow = min($sheet->getHighestDataRow(), self::MAX_ROWS);
+            $lastColumn = min(Coordinate::columnIndexFromString($sheet->getHighestDataColumn()), self::MAX_COLUMNS);
+
             $rows = [];
-            foreach ($sheet->getRowIterator(1, min($sheet->getHighestDataRow(), self::MAX_ROWS)) as $row) {
+            for ($r = 1; $r <= $lastRow; $r++) {
                 $cells = [];
-                foreach ($row->getCellIterator() as $cell) {
+                for ($c = 1; $c <= $lastColumn; $c++) {
+                    // Пустые ячейки не создаём: getCell() на пустом месте раздувает память.
+                    $cell = $sheet->cellExists([$c, $r]) ? $sheet->getCell([$c, $r]) : null;
                     try {
-                        $value = $cell->getCalculatedValue();
+                        $value = $cell?->getCalculatedValue();
                     } catch (Throwable) {
-                        $value = $cell->getValue();
+                        $value = $cell?->getValue();
                     }
                     $cells[] = is_string($value) || is_int($value) || is_float($value) ? $value : null;
                 }

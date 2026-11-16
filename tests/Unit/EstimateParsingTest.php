@@ -61,6 +61,29 @@ class EstimateParsingTest extends TestCase
         $this->assertTrue($units->compatible('100 м', 'м'));
         $this->assertFalse($units->compatible('шт', 'м'));
         $this->assertTrue($units->compatible(null, 'м'));
+        $this->assertFalse($units->compatible('100 м3', 'шт'));
+        $this->assertTrue($units->isService('чел.-ч'));
+        $this->assertTrue($units->isService('%'));
+        $this->assertFalse($units->isService('м'));
+    }
+
+    public function test_short_header_and_estimate_service_rows(): void
+    {
+        // Шапка «ЕИ» (как в субподрядной ведомости) и служебные строки сметы ГЭСН.
+        $rows = [
+            ['№', 'Наименование', 'ЕИ', 'Кол-во'],
+            [1, 'Монтаж извещателя теплового', 'шт', 6],
+            [2, 'Средний разряд работы 2,0', 'чел.-ч', 154],
+            [3, 'НР Земляные работы, выполняемые ручным способом', '%', 89],
+            [4, 'Коэффициент к затратам труда рабочих (ЗТ)', '', 1.15],
+            [5, 'Разработка грунта вручную в траншеях', '100 м3', 1.031],
+            ['', 'СУММА ЗА РАБОТЫ', '', 1000],
+        ];
+
+        $lines = $this->extractor()->extract($rows);
+
+        $this->assertSame(['Монтаж извещателя теплового', 'Разработка грунта вручную в траншеях'], array_map(fn ($l) => $l->name, $lines));
+        $this->assertSame('шт', $lines[0]->unit);
     }
 
     public function test_table_with_header(): void

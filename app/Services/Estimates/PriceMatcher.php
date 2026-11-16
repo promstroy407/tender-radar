@@ -44,7 +44,11 @@ class PriceMatcher
         return $best;
     }
 
-    /** Все слова фразы должны встретиться в тексте (как начало слова); счёт — их общая длина. */
+    /**
+     * Все слова фразы должны встретиться в тексте как начало слова; короткие (до 3 букв:
+     * «вру», «щр», «узо») — целым словом, чтобы «вру» не находилось во «вручную».
+     * Счёт — общая длина совпавших слов.
+     */
     private function score(string $text, string $phrase): int
     {
         $score = 0;
@@ -52,7 +56,8 @@ class PriceMatcher
             if ($word === '') {
                 continue;
             }
-            if (preg_match('/(^|\s)'.preg_quote($word, '/').'/u', $text) !== 1) {
+            $end = mb_strlen($word) <= 3 ? '(\s|$)' : '';
+            if (preg_match('/(^|\s)'.preg_quote($word, '/').$end.'/u', $text) !== 1) {
                 return 0;
             }
             $score += mb_strlen($word);

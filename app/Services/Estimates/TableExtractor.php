@@ -13,7 +13,7 @@ class TableExtractor
 {
     private const HEADER_SCAN_ROWS = 60;
 
-    private const SKIP_PREFIXES = ['итого', 'всего', 'раздел', 'в том числе', 'в т.ч', 'накладные', 'сметная прибыль', 'ндс', 'перевозка', 'материалы', 'оборудование', 'прочие'];
+    private const SKIP_PREFIXES = ['итого', 'всего', 'сумма', 'стоимость работ', 'раздел', 'в том числе', 'в т.ч', 'накладные', 'сметная прибыль', 'ндс', 'перевозка', 'материалы', 'оборудование', 'прочие', 'коэффициент', 'нр ', 'сп ', 'средний разряд', '% выполнения', 'объем=', 'индекс', 'зтр', 'от(зт)', 'эм ', 'в т. ч'];
 
     public function __construct(
         private readonly NumberParser $numbers,
@@ -59,7 +59,7 @@ class TableExtractor
                 }
                 if ($name === null && str_contains($text, 'наименован')) {
                     $name = $col;
-                } elseif ($unit === null && (preg_match('/(^|\s)ед(\s|\.|$|иниц)/u', $text) === 1 || str_contains($text, 'изм'))) {
+                } elseif ($unit === null && (preg_match('/(^|\s)(ед|еи)(\s|\.|$|иниц)/u', $text) === 1 || str_contains($text, 'изм'))) {
                     $unit = $col;
                 } elseif ($qty === null && (str_contains($text, 'кол-во') || str_contains($text, 'количеств') || preg_match('/(^|\s)кол\./u', $text) === 1)) {
                     $qty = $col;
@@ -134,8 +134,12 @@ class TableExtractor
         return null;
     }
 
-    private function line(string $name, ?string $unit, int $quantityMilli, ?int $materialKopecks): ExtractedLine
+    private function line(string $name, ?string $unit, int $quantityMilli, ?int $materialKopecks): ?ExtractedLine
     {
+        if ($this->units->isService($unit)) {
+            return null;
+        }
+
         // «100 м» × 1,255 = 125,5 м: переводим в единицы прайса.
         $parsed = $this->units->parse($unit);
         if ($parsed !== null && $parsed['multiplier'] > 1) {

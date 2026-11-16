@@ -14,6 +14,12 @@ class UnitNormalizer
 
     public const PIECE = 'piece';
 
+    /** Площадь, объём, масса и прочее: с метрами и штуками прайса не сопоставляются. */
+    public const OTHER = 'other';
+
+    /** Служебные строки сметы ГЭСН: трудозатраты, проценты НР/СП, коэффициенты. */
+    public const SERVICE = 'service';
+
     /** Похоже ли значение ячейки на единицу измерения. */
     public function looksLikeUnit(string $value): bool
     {
@@ -48,11 +54,25 @@ class UnitNormalizer
             return ['kind' => self::LENGTH, 'multiplier' => $multiplier * 1000];
         }
 
-        if (preg_match('/^(шт|штук|компл|комплект|к-т|кт|точк|точка|ед|услуг|услуга|система|прибор|место|порт|линия|шлейф)$/u', $text) === 1) {
+        if (preg_match('/^(шт|штук|компл|комплект|к-т|кт|точк|точка|ед|услуг|услуга|система|прибор|место|порт|линия|шлейф|конец|концов|узел|отв|отверстие)$/u', $text) === 1) {
             return ['kind' => self::PIECE, 'multiplier' => $multiplier];
         }
 
+        if (preg_match('/^(%|чел\.?\s?-?\s?ч|маш\.?\s?-?\s?ч|руб|коэф)$/u', $text) === 1) {
+            return ['kind' => self::SERVICE, 'multiplier' => $multiplier];
+        }
+
+        if (preg_match('/^(м2|м3|м²|м³|кв\.?\s?м|куб\.?\s?м|т|тн|кг|г|л|га|км2)$/u', $text) === 1) {
+            return ['kind' => self::OTHER, 'multiplier' => $multiplier];
+        }
+
         return null;
+    }
+
+    /** Строка с такой единицей — служебная (НР, СП, трудозатраты), а не работа. */
+    public function isService(?string $unit): bool
+    {
+        return ($this->parse($unit)['kind'] ?? null) === self::SERVICE;
     }
 
     /** Единица прайса («м», «шт», «компл», «точка», «услуга») — того же рода, что единица сметы? */

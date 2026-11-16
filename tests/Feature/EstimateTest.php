@@ -12,6 +12,7 @@ use App\Models\EstimateFile;
 use App\Models\EstimateLine;
 use App\Models\PriceItem;
 use App\Models\User;
+use App\Services\Estimates\PriceMatcher;
 use Database\Seeders\PriceItemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -73,6 +74,22 @@ class EstimateTest extends TestCase
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id)
             ->assertOk()
             ->assertSee("11\u{00A0}500\u{00A0}₽");
+    }
+
+    public function test_matching_rules_from_real_estimates(): void
+    {
+        $items = PriceItem::query()->get();
+        $matcher = $this->app->make(PriceMatcher::class);
+
+        // Короткое ключевое слово «вру» не должно находиться во «вручную».
+        $this->assertNotSame('Монтаж ВРУ или распределительного шкафа', $matcher->match('Разработка грунта вручную в траншеях', 'м', $items)?->name);
+        $this->assertSame('Монтаж ВРУ или распределительного шкафа', $matcher->match('Монтаж ВРУ-1 вводного', 'шт', $items)?->name);
+        $this->assertSame('Установка однополюсного автомата', $matcher->match('Авт. выкл. NXM-250S/3P, 200А', 'шт.', $items)?->name);
+        $this->assertSame('Установка УЗО или дифавтомата', $matcher->match('Дифференц. автомат NB1L-40, 2P', 'шт.', $items)?->name);
+        $this->assertSame('Прокладка кабеля в траншее', $matcher->match('Прокладка кабеля ПС в траншее', 'м', $items)?->name);
+        $this->assertSame('Монтаж дымового извещателя', $matcher->match('Установка наружных извещателей', 'шт.', $items)?->name);
+        // Объём с метрами прайса не сопоставляется.
+        $this->assertNull($matcher->match('Засыпка кабеля песком', '100 м3', $items));
     }
 
     public function test_line_can_be_matched_manually_or_skipped(): void
