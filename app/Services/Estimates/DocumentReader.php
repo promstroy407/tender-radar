@@ -77,11 +77,14 @@ class DocumentReader
                 $cells = [];
                 for ($c = 1; $c <= $lastColumn; $c++) {
                     // Пустые ячейки не создаём: getCell() на пустом месте раздувает память.
-                    $cell = $sheet->cellExists([$c, $r]) ? $sheet->getCell([$c, $r]) : null;
-                    try {
-                        $value = $cell?->getCalculatedValue();
-                    } catch (Throwable) {
-                        $value = $cell?->getValue();
+                    $value = null;
+                    if ($sheet->cellExists([$c, $r])) {
+                        $cell = $sheet->getCell([$c, $r]);
+                        try {
+                            $value = $cell->getCalculatedValue();
+                        } catch (Throwable) {
+                            $value = $cell->getValue();
+                        }
                     }
                     $cells[] = is_string($value) || is_int($value) || is_float($value) ? $value : null;
                 }
