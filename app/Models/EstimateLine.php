@@ -50,19 +50,18 @@ class EstimateLine extends Model
     }
 
     /**
-     * Наша стоимость работы по строке: количество × цена прайса, с округлением до копейки.
-     * Вычисляется, не хранится. null — позиция не сопоставлена или у неё нет цены.
+     * Стоимость работы по строке: количество × цена за единицу (нормативная по региону
+     * или вписанная вручную — её даёт PriceResolver), с округлением до копейки.
+     * Вычисляется, не хранится. null — позиция не считается или цены нет.
      */
-    public function workKopecks(): ?int
+    public function workKopecks(?int $unitPriceKopecks): ?int
     {
-        if ($this->match === LineMatch::Skip) {
+        if ($this->match === LineMatch::Skip || $unitPriceKopecks === null) {
             return null;
         }
 
-        $price = $this->priceItem?->work_price_kopecks;
-
         // Количество — в тысячных долях: делим на 1000 с округлением «половина вверх».
-        return $price === null ? null : intdiv($this->quantity_milli * $price + 500, 1000);
+        return intdiv($this->quantity_milli * $unitPriceKopecks + 500, 1000);
     }
 
     /**

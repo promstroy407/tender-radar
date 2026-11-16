@@ -18,6 +18,10 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  */
 class EstimateExporter
 {
+    public function __construct(
+        private readonly PriceResolver $prices,
+    ) {}
+
     private const MONEY = '#,##0.00';
 
     private const QTY = '#,##0.###';
@@ -33,15 +37,15 @@ class EstimateExporter
 
         $contract = $estimate->contract;
         $sheet->setCellValue('A1', 'Быстрая смета: '.$contract->subject);
-        $sheet->setCellValue('A2', 'Только работы — по нашему прайсу. Материалы считаются отдельно. Для себя, не для отправки.');
+        $sheet->setCellValue('A2', 'Только работы: по нормативам ГЭСН и ставкам труда региона (ФГИС ЦС) с НР и СП, без машин; где нормы нет — по цене прайса. Материалы отдельно. Для себя, не для отправки.');
 
-        $headers = ['№', 'Наименование (из сметы заказчика)', 'Ед.', 'Кол-во', 'Наша позиция прайса', 'Цена работы, ₽', 'Работа, ₽'];
+        $headers = ['№', 'Наименование (из сметы заказчика)', 'Ед.', 'Кол-во', 'Наша позиция прайса', 'Цена работы, ₽ (ГЭСН по региону или вручную)', 'Работа, ₽'];
         $sheet->fromArray($headers, null, 'A4');
 
         $row = 5;
         foreach ($lines as $index => $line) {
             $skip = $line->match === LineMatch::Skip;
-            $price = $skip ? null : $line->priceItem?->work_price_kopecks;
+            $price = $skip || $line->priceItem === null ? null : $this->prices->unitPrice($line->priceItem, $contract->region_code);
 
             $sheet->setCellValue('A'.$row, $index + 1);
             $sheet->setCellValue('B'.$row, $line->name);

@@ -19,12 +19,13 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $unit
  * @property int|null $work_price_kopecks
+ * @property string|null $gesn_code
  * @property string $keywords
  * @property bool $is_active
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
-#[Fillable(['section', 'name', 'unit', 'work_price_kopecks', 'keywords', 'is_active'])]
+#[Fillable(['section', 'name', 'unit', 'work_price_kopecks', 'gesn_code', 'keywords', 'is_active'])]
 class PriceItem extends Model
 {
     /** @use HasFactory<PriceItemFactory> */
