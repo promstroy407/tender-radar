@@ -6,12 +6,15 @@ namespace App\Services\Estimates;
 
 use App\Enums\LineMatch;
 use App\Models\Estimate;
+use App\Models\EstimateFile;
 use App\Models\EstimateLine;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Считает быструю смету: только работы по нашему прайсу. Материалы считаются отдельно
- * (стоимость материала из сметы заказчика сохраняется в позиции для этого).
+ * Считает быструю смету — только работы:
+ *  - из нормативных смет заказчика (ГЭСН): итог минус материалы и оборудование;
+ *  - позиции ведомостей — по прайсу, если в нём заданы цены.
+ * Материалы считаются отдельно (стоимость из сметы заказчика сохраняется в позициях).
  */
 class EstimateCalculator
 {
@@ -41,8 +44,20 @@ class EstimateCalculator
             }
         }
 
+        $normative = $normativeFiles = 0;
+        foreach ($estimate->files as $file) {
+            /** @var EstimateFile $file */
+            $totals = $file->normativeTotals();
+            if ($totals !== null) {
+                $normative += $totals->worksKopecks();
+                $normativeFiles++;
+            }
+        }
+
         return new EstimateSummary(
-            workKopecks: $work,
+            normativeKopecks: $normative,
+            normativeFiles: $normativeFiles,
+            priceListKopecks: $work,
             contractKopecks: $estimate->contract->amount_kopecks,
             linesTotal: $lines->count(),
             linesPriced: $priced,

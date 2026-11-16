@@ -19,27 +19,33 @@
         <h2 style="line-height:1.35">{{ $contract->subject }}</h2>
         <p class="muted">{{ $contract->region->name }} · {{ $contract->company->name }}</p>
 
-        @if ($summary && $summary->linesTotal > 0)
+        @if ($summary && $summary->hasData())
             <div class="grid2">
-                <div class="kv"><span class="label">Наши работы</span><b style="font-size:17px">{{ $money->format($summary->workKopecks) }}</b></div>
+                <div class="kv"><span class="label">Работы</span><b style="font-size:17px">{{ $money->format($summary->workKopecks()) }}</b></div>
                 <div class="kv"><span class="label">Сумма контракта</span><b>{{ $money->format($summary->contractKopecks) }}</b></div>
             </div>
             @if ($summary->shareLabel())
-                <p class="muted" style="color:var(--ink2)">Наши работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в ней есть и материалы).</p>
+                <p class="muted" style="color:var(--ink2)">Работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в ней есть и материалы).</p>
             @endif
-            <p class="muted">
-                Позиций: {{ $summary->linesTotal }} · посчитано {{ $summary->linesPriced }}
-                @if ($summary->linesUnmatched) · <b style="color:var(--hot)">не сопоставлено {{ $summary->linesUnmatched }}</b>@endif
-                @if ($summary->linesNoPrice) · <b style="color:var(--hot)">нет цены в прайсе {{ $summary->linesNoPrice }}</b>@endif
-                @if ($summary->linesSkipped) · не считаем {{ $summary->linesSkipped }}@endif
-            </p>
-            <p class="muted" style="font-size:12px">Цены прайса — «от», с сайта es12.ru. Материалы не считаем — они отдельно. Это прикидка, не смета для отправки.</p>
+            @if ($summary->normativeFiles > 0)
+                <p class="muted">По нормативам из сметы заказчика: <b style="color:var(--ink)">{{ $money->format($summary->normativeKopecks) }}</b> — оплата труда, машины, накладные расходы и сметная прибыль, без материалов, оборудования и НДС.</p>
+            @endif
+            @if ($summary->linesTotal > 0)
+                <p class="muted">
+                    Позиции ведомостей: {{ $summary->linesTotal }} · посчитано по прайсу {{ $summary->linesPriced }} ({{ $money->format($summary->priceListKopecks) }})
+                    @if ($summary->linesUnmatched) · <b style="color:var(--hot)">не сопоставлено {{ $summary->linesUnmatched }}</b>@endif
+                    @if ($summary->linesNoPrice) · <b style="color:var(--hot)">без цены {{ $summary->linesNoPrice }}</b>@endif
+                    @if ($summary->linesSkipped) · не считаем {{ $summary->linesSkipped }}@endif
+                </p>
+                <p class="muted" style="font-size:12px">Ведомости без цен пока не считаются по нормативам — это следующий этап. Свои цены можно вписать в «Прайс работ».</p>
+            @endif
+            <p class="muted" style="font-size:12px">Материалы не считаем — они отдельно. Это прикидка, не смета для отправки.</p>
             <div class="row">
                 <a class="button secondary" href="{{ route('estimates.export', $contract) }}">Скачать в Excel</a>
                 <a class="button secondary" href="{{ route('prices') }}">Прайс работ</a>
             </div>
         @else
-            <p class="muted">Загрузите документацию тендера: смету или ведомость работ (Excel, PDF) или ZIP-архив. Приложение найдёт позиции и посчитает работу по вашему прайсу.</p>
+            <p class="muted">Загрузите документацию тендера: смету заказчика (Excel), ведомость работ или ZIP-архив. Из нормативной сметы приложение возьмёт стоимость работ без материалов.</p>
         @endif
     </section>
 
@@ -65,6 +71,9 @@
                         </div>
                         @if ($file->error)
                             <p class="muted" style="color:var(--hotink)">{{ $file->error }}</p>
+                        @endif
+                        @if ($totals = $file->normativeTotals())
+                            <p class="muted">Нормативная смета: итог {{ $money->format($totals->totalKopecks) }}, материалы {{ $money->format($totals->materialsKopecks) }}@if ($totals->equipmentKopecks), оборудование {{ $money->format($totals->equipmentKopecks) }}@endif → <b style="color:var(--ink)">работы {{ $money->format($totals->worksKopecks()) }}</b></p>
                         @endif
                     </div>
                 @endforeach

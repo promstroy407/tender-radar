@@ -23,6 +23,7 @@ class EstimateParser
         private readonly DocumentReader $reader,
         private readonly TableExtractor $extractor,
         private readonly PriceMatcher $matcher,
+        private readonly NormativeTotalsExtractor $normative,
         private readonly FilesystemFactory $storage,
         private readonly ConnectionInterface $db,
     ) {}
@@ -37,11 +38,13 @@ class EstimateParser
                 array_push($lines, ...$this->extractor->extract($rows));
             }
 
-            if ($lines === []) {
+            $totals = $this->normative->extract($tables);
+
+            if ($lines === [] && $totals === null) {
                 throw new EstimateReadException('Позиций не нашли: нужна таблица с наименованием, единицей и количеством.');
             }
 
-            $this->store($file, $lines);
+            $this->store($file, $lines, $totals);
         } catch (EstimateReadException $e) {
             $this->fail($file, $e->getMessage());
         } catch (Throwable $e) {
@@ -53,12 +56,17 @@ class EstimateParser
     /**
      * @param  list<ExtractedLine>  $lines
      */
-    private function store(EstimateFile $file, array $lines): void
+    private function store(EstimateFile $file, array $lines, ?NormativeTotals $totals): void
     {
         $items = PriceItem::query()->where('is_active', true)->get();
         $now = now();
 
-        $this->db->transaction(function () use ($file, $lines, $items, $now): void {
+        // Из нормативной сметы берём только итог по работам: построчно её не пересчитываем.
+        if ($totals !== null) {
+            $lines = [];
+        }
+
+        $this->db->transaction(function () use ($file, $lines, $items, $now, $totals): void {
             $file->lines()->delete();
 
             $rows = [];
@@ -83,13 +91,25 @@ class EstimateParser
                 EstimateLine::query()->insert($chunk);
             }
 
-            $file->forceFill(['status' => EstimateFileStatus::Parsed, 'error' => null])->save();
+            $file->forceFill([
+                'status' => EstimateFileStatus::Parsed,
+                'error' => null,
+                'norm_total_kopecks' => $totals?->totalKopecks,
+                'norm_materials_kopecks' => $totals?->materialsKopecks,
+                'norm_equipment_kopecks' => $totals?->equipmentKopecks,
+            ])->save();
         });
     }
 
     private function fail(EstimateFile $file, string $message): void
     {
         $file->lines()->delete();
-        $file->forceFill(['status' => EstimateFileStatus::Failed, 'error' => mb_substr($message, 0, 1000)])->save();
+        $file->forceFill([
+            'status' => EstimateFileStatus::Failed,
+            'error' => mb_substr($message, 0, 1000),
+            'norm_total_kopecks' => null,
+            'norm_materials_kopecks' => null,
+            'norm_equipment_kopecks' => null,
+        ])->save();
     }
 }

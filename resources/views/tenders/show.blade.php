@@ -69,18 +69,18 @@
     <section class="card">
         <div class="between">
             <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Смета — для себя</h3>
-            <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">{{ $estimateSummary && $estimateSummary->linesTotal > 0 ? 'Открыть' : 'Посчитать' }} →</a>
+            <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">{{ $estimateSummary && $estimateSummary->hasData() ? 'Открыть' : 'Посчитать' }} →</a>
         </div>
-        @if ($estimateSummary && $estimateSummary->linesTotal > 0)
+        @if ($estimateSummary && $estimateSummary->hasData())
             <div class="grid2">
-                <div class="kv"><span class="label">Наши работы</span><b>{{ $money->format($estimateSummary->workKopecks) }}</b></div>
+                <div class="kv"><span class="label">Работы</span><b>{{ $money->format($estimateSummary->workKopecks()) }}</b></div>
                 <div class="kv"><span class="label">От суммы контракта</span><b>{{ $estimateSummary->shareLabel() ?? '—' }}</b></div>
             </div>
             @if ($estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice > 0)
                 <p class="muted">Без цены: {{ $estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice }} поз. — проверьте в смете.</p>
             @endif
         @else
-            <p class="muted">Загрузите смету или ведомость из документации — прикинем стоимость работ по вашему прайсу.</p>
+            <p class="muted">Загрузите смету заказчика из документации — возьмём стоимость работ по нормативам, без материалов.</p>
         @endif
     </section>
 

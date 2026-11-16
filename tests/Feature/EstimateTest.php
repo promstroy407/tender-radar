@@ -35,6 +35,57 @@ class EstimateTest extends TestCase
 
         Storage::fake('local');
         $this->seed(PriceItemSeeder::class);
+
+        // Стартовый перечень без цен (решение 16.11.2026); для проверки расчёта
+        // вписываем цены так, как их впишет заказчик в «Прайсе работ».
+        foreach (self::HAND_PRICES as $name => $kopecks) {
+            PriceItem::query()->where('name', $name)->update(['work_price_kopecks' => $kopecks]);
+        }
+    }
+
+    /** @var array<string, int> */
+    private const HAND_PRICES = [
+        'Монтаж дымового извещателя' => 30_000,
+        'Прокладка кабеля шлейфа' => 3_000,
+        'Монтаж приёмно-контрольного прибора' => 100_000,
+        'Монтаж сирены' => 130_000,
+    ];
+
+    public function test_customer_normative_estimate_gives_works_without_materials(): void
+    {
+        // Фрагмент выгрузки ПК РИК: итоги разделов, затем итог сметы и «Итого по смете» с НДС при УСН.
+        $contract = Contract::factory()->create(['amount_kopecks' => 300_000_000]);
+
+        $this->actingAs($this->admin())->post('/tenders/'.$contract->id.'/estimate/files', ['files' => [$this->xlsx([
+            ['Локальный сметный расчёт (смета) № 1'],
+            ['№ п/п', 'Обоснование', 'Наименование работ и затрат', 'Ед. изм.', 'Количество'],
+            ['1', 'ГЭСНм08-02-399-01', 'Прокладка кабеля до 35 кВ в проложенных трубах', '100 м', 1.2],
+            [null, null, 'Средний разряд работы 4,0', 'чел.-ч', 54],
+            [null, null, 'Итого по разделу 1', null, 282178.99],
+            [null, null, 'ВСЕГО по смете', 1041495.44, null, 'ВСЕГО по смете'],
+            [null, null, 'Всего - ОТ', 402641.97, null, 'Всего - ОТ'],
+            [null, null, 'Всего - МР', 51599.06, null, 'Всего - МР'],
+            [null, null, 'Всего оборудование', null, null, 'Всего оборудование'],
+            [null, null, 'Всего - Итоговая сметная стоимость (без НДС)', 1041495.44],
+            [null, null, 'Компенсация НДС при УСН', 35967.56],
+            [null, null, 'ИТОГО ПО СМЕТЕ', 1077463.0],
+        ])]]);
+
+        $file = EstimateFile::query()->sole();
+        $this->assertSame(104_149_544, $file->norm_total_kopecks);
+        $this->assertSame(5_159_906, $file->norm_materials_kopecks);
+        $this->assertSame(98_989_638, $file->normativeTotals()?->worksKopecks());
+        // Построчно нормативную смету не пересчитываем — только итог.
+        $this->assertSame(0, EstimateLine::query()->count());
+
+        $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/estimate')
+            ->assertOk()
+            ->assertSee("989\u{00A0}896,38\u{00A0}₽")
+            ->assertSee('33,0 %')
+            ->assertSee('без материалов, оборудования и НДС');
+
+        $this->actingAs($this->admin())->get('/tenders/'.$contract->id)
+            ->assertSee("989\u{00A0}896,38\u{00A0}₽");
     }
 
     public function test_excel_estimate_is_read_matched_and_summed(): void
