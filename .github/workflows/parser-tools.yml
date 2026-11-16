@@ -9,6 +9,8 @@ on:
 jobs:
   vendor:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: shivammathur/setup-php@v2
         with:
@@ -26,8 +28,15 @@ jobs:
             "phpoffice/phpspreadsheet:^5.0" "illuminate/database:^13.0" \
             "illuminate/process:^13.0" "illuminate/support:^13.0"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: parser-tools
-          path: tools/vendor
-          retention-days: 1
+      # Архивы Actions из рабочей среды не скачиваются, поэтому — отдельной веткой без истории.
+      - name: Ветка tools/parser-vendor
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd tools
+          git init -q -b tools/parser-vendor
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor composer.json composer.lock
+          git commit -qm "Библиотеки для проверки разбора смет"
+          git push -q --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" tools/parser-vendor
