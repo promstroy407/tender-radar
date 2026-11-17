@@ -72,7 +72,7 @@ class ContractService
         }
 
         if ($search->onlyNew) {
-            $query->whereDoesntHave('offer');
+            $query->whereDoesntHave('deal');
         }
 
         match ($search->filter) {

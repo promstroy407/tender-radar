@@ -53,10 +53,22 @@
         .badge.on { background:var(--okbg); color:var(--ok); }
         .badge.off { background:var(--chip); color:var(--ink2); }
         .badge.hot { background:var(--hot); color:#fff; letter-spacing:.3px; }
-        .badge.sent { background:var(--accentbg); color:var(--accent); }
-        .badge.replied { background:var(--okbg); color:var(--ok); }
-        .badge.deal { background:var(--hotbg); color:#9A3412; }
+        .badge.new, .badge.brief_received { background:var(--accentbg); color:var(--accent); }
+        .badge.offer_sent, .badge.negotiation { background:var(--okbg); color:var(--ok); }
+        .badge.contract, .badge.in_progress { background:var(--hotbg); color:#9A3412; }
+        .badge.done_paid { background:var(--ok); color:#fff; }
         .badge.refused, .badge.dismissed { background:var(--chip); color:var(--ink2); }
+        .status-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+        .status-grid button { min-height:44px; padding:0 6px; font-size:13px; }
+        .status-grid button[aria-pressed=true] { background:var(--ink); color:#fff; border-color:var(--ink); }
+        .scroll-x { display:flex; gap:8px; overflow-x:auto; margin:0 -20px; padding:0 20px 2px; scrollbar-width:none; }
+        .scroll-x .stat { flex:none; min-width:96px; padding:0 8px; }
+        table.report { width:100%; border-collapse:collapse; font-size:13px; }
+        table.report th { text-align:left; font-weight:600; color:var(--muted); font-size:12px; padding:6px 4px; border-bottom:1px solid var(--line); }
+        table.report td { padding:8px 4px; border-bottom:1px solid var(--chip); vertical-align:top; }
+        table.report .num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .bar { height:6px; border-radius:3px; background:var(--chip); overflow:hidden; }
+        .bar i { display:block; height:100%; background:var(--accent); }
         .tag { font-size:12px; font-weight:600; color:var(--accent); background:var(--accentbg); padding:4px 10px; border-radius:8px; }
         .tags { display:flex; gap:6px; flex-wrap:wrap; }
         .error { color:var(--err); font-size:13px; margin:0; }

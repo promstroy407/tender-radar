@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Enums\OfferStatus;
+use App\Enums\DealStatus;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Models\Deal;
 use App\Models\Offer;
 use App\Models\Region;
 use App\Models\User;
@@ -22,9 +23,9 @@ class TenderScreensTest extends TestCase
         $hot = Contract::factory()->hot()->create(['subject' => 'Капремонт школы 7']);
         Contract::factory()->create(['subject' => 'Видеонаблюдение в поликлинике']);
         $sent = Contract::factory()->create(['subject' => 'Уже отправили']);
-        Offer::factory()->create(['contract_id' => $sent->id]);
+        Offer::factory()->for(Deal::factory()->tender()->state(['contract_id' => $sent->id]))->create(['contract_id' => $sent->id]);
         $dismissed = Contract::factory()->create(['subject' => 'Неинтересный']);
-        Offer::factory()->dismissed()->create(['contract_id' => $dismissed->id]);
+        Deal::factory()->tender()->status(DealStatus::Dismissed)->create(['contract_id' => $dismissed->id]);
 
         $this->actingAs($this->admin())->get('/')
             ->assertOk()
@@ -87,56 +88,6 @@ class TenderScreensTest extends TestCase
         $contract = Contract::factory()->create();
 
         $this->actingAs(User::factory()->create())->get('/tenders/'.$contract->id)->assertForbidden();
-    }
-
-    public function test_work_screen_lists_offers_by_status(): void
-    {
-        $sent = Offer::factory()->create();
-        $replied = Offer::factory()->status(OfferStatus::Replied)->create(['note' => 'Созвониться в понедельник']);
-
-        $this->actingAs($this->admin())->get('/work')
-            ->assertOk()
-            ->assertSee($sent->contract->company->name)
-            ->assertDontSee($replied->contract->company->name)
-            ->assertSee('Напомнить');
-
-        $this->actingAs($this->admin())->get('/work?status=replied')
-            ->assertOk()
-            ->assertSee($replied->contract->company->name)
-            ->assertSee('Созвониться в понедельник');
-    }
-
-    public function test_work_rejects_unknown_status_and_non_admin(): void
-    {
-        $this->actingAs($this->admin())->get('/work?status=dismissed')->assertSessionHasErrors('status');
-        $this->actingAs(User::factory()->create())->get('/work')->assertForbidden();
-    }
-
-    public function test_offer_status_can_be_changed(): void
-    {
-        $offer = Offer::factory()->create();
-
-        $this->actingAs($this->admin())
-            ->put('/offers/'.$offer->id, ['status' => 'replied', 'remind_on' => '2026-11-20', 'note' => ' Ждут смету '])
-            ->assertRedirect('/work?status=replied');
-
-        $offer->refresh();
-        $this->assertSame(OfferStatus::Replied, $offer->status);
-        $this->assertSame('2026-11-20', $offer->remind_on?->toDateString());
-        $this->assertSame('Ждут смету', $offer->note);
-    }
-
-    public function test_offer_update_is_validated_and_protected(): void
-    {
-        $offer = Offer::factory()->create();
-
-        $this->actingAs($this->admin())
-            ->put('/offers/'.$offer->id, ['status' => 'won', 'remind_on' => '20.11.2026', 'note' => str_repeat('я', 2001)])
-            ->assertSessionHasErrors(['status', 'remind_on', 'note']);
-
-        $this->actingAs(User::factory()->create())
-            ->put('/offers/'.$offer->id, ['status' => 'replied'])
-            ->assertForbidden();
     }
 
     private function admin(): User

@@ -14,6 +14,7 @@
 @php
     $company = $contract->company;
     $offer = $contract->offer;
+    $deal = $contract->deal;
 @endphp
 
 @section('main_class', 'with-actions')
@@ -93,10 +94,10 @@
 @section('bottom')
     <div class="actionbar">
         <div>
-            @if ($offer && $offer->status->value !== 'dismissed')
-                <div role="status" class="flash ok" style="text-align:center;font-weight:600">
-                    КП отправлено{{ $offer->channel ? ' ('.$offer->channel->label().')' : '' }}{{ $offer->sent_at ? ', '.$offer->sent_at->translatedFormat('j F') : '' }}. Статус: «{{ $offer->status->label() }}»
-                </div>
+            @if ($offer && $deal)
+                <a role="status" class="flash ok" href="{{ route('deals.show', $deal) }}" style="display:block;text-align:center;font-weight:600">
+                    КП отправлено ({{ $offer->channel->label() }}, {{ $offer->sent_at->translatedFormat('j F') }}). Сделка: «{{ $deal->status->label() }}» →
+                </a>
             @else
                 <form method="post" action="{{ route('offers.email', $contract) }}">
                     @csrf
@@ -119,7 +120,7 @@
                 </form>
                 <form method="post" action="{{ route('offers.dismiss', $contract) }}">
                     @csrf
-                    <button type="submit" class="secondary" style="width:100%;font-size:13px;color:var(--muted)" @disabled($offer !== null)>Не интересно</button>
+                    <button type="submit" class="secondary" style="width:100%;font-size:13px;color:var(--muted)" @disabled($deal !== null)>Не интересно</button>
                 </form>
             </div>
             @if (! $company->phone)

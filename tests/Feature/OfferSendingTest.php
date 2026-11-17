@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\DealSource;
+use App\Enums\DealStatus;
 use App\Enums\OfferChannel;
-use App\Enums\OfferStatus;
 use App\Enums\SettingKey;
 use App\Mail\KpMail;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Models\Deal;
 use App\Models\Offer;
 use App\Models\User;
 use App\Services\KpTemplateService;
@@ -51,10 +53,17 @@ class OfferSendingTest extends TestCase
         });
 
         $offer = Offer::query()->sole();
-        $this->assertSame(OfferStatus::Sent, $offer->status);
         $this->assertSame(OfferChannel::Email, $offer->channel);
         $this->assertSame($admin->id, $offer->user_id);
-        $this->assertSame(now()->addDays(3)->toDateString(), $offer->remind_on?->toDateString());
+
+        // КП открывает тендерную сделку в общей воронке.
+        $deal = $offer->deal;
+        $this->assertSame(DealSource::Tender, $deal->source);
+        $this->assertSame(DealStatus::OfferSent, $deal->status);
+        $this->assertSame(DealStatus::OfferSent, $deal->reached_status);
+        $this->assertSame($contract->id, $deal->contract_id);
+        $this->assertSame($contract->company_id, $deal->company_id);
+        $this->assertSame(now()->addDays(3)->toDateString(), $deal->remind_on?->toDateString());
     }
 
     public function test_pdf_is_attached_when_uploaded(): void
@@ -100,6 +109,7 @@ class OfferSendingTest extends TestCase
     {
         $this->app->make(SettingsService::class)->put(SettingKey::KpDailyLimit, '1');
         Offer::factory()->create(['channel' => OfferChannel::Email, 'sent_at' => now()]);
+        $this->assertSame(1, Deal::query()->count());
         $contract = $this->contract('info@winner.test');
 
         $this->actingAs(User::factory()->admin()->create())->post('/tenders/'.$contract->id.'/email')
@@ -141,7 +151,36 @@ class OfferSendingTest extends TestCase
         $this->actingAs(User::factory()->admin()->create())->post('/tenders/'.$contract->id.'/dismiss')
             ->assertRedirect('/');
 
-        $this->assertSame(OfferStatus::Dismissed, Offer::query()->sole()->status);
+        $this->assertSame(0, Offer::query()->count());
+        $deal = Deal::query()->sole();
+        $this->assertSame(DealStatus::Dismissed, $deal->status);
+        $this->assertSame(DealStatus::New, $deal->reached_status);
+    }
+
+    public function test_resending_does_not_roll_back_further_deal(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contract = $this->contract('info@winner.test', '8 (937) 112-48-97');
+        $deal = Deal::factory()->tender()->status(DealStatus::Negotiation)->create(['contract_id' => $contract->id]);
+
+        $this->actingAs($admin)->post('/tenders/'.$contract->id.'/messenger', ['channel' => 'whatsapp']);
+
+        $deal->refresh();
+        $this->assertSame(DealStatus::Negotiation, $deal->status);
+        $this->assertSame($deal->id, Offer::query()->sole()->deal_id);
+    }
+
+    public function test_sending_after_dismiss_reopens_deal(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $contract = $this->contract('info@winner.test', '8 (937) 112-48-97');
+
+        $this->actingAs($admin)->post('/tenders/'.$contract->id.'/dismiss');
+        $this->actingAs($admin)->post('/tenders/'.$contract->id.'/messenger', ['channel' => 'telegram']);
+
+        $deal = Deal::query()->sole();
+        $this->assertSame(DealStatus::OfferSent, $deal->status);
+        $this->assertSame(DealStatus::OfferSent, $deal->reached_status);
     }
 
     public function test_non_admin_cannot_send(): void

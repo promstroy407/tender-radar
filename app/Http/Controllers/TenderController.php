@@ -46,7 +46,7 @@ class TenderController extends Controller
 
     public function show(Contract $contract): View
     {
-        $contract->load(['company', 'region', 'offer', 'estimate']);
+        $contract->load(['company', 'region', 'offer', 'deal', 'estimate']);
         $rendered = $this->template->render($contract);
 
         return view('tenders.show', [

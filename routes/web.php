@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\DealController;
 use App\Http\Controllers\EisSettingsController;
 use App\Http\Controllers\EstimateController;
 use App\Http\Controllers\KpTemplateController;
@@ -13,8 +14,8 @@ use App\Http\Controllers\SearchSettingsController;
 use App\Http\Controllers\TelegramSettingsController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\TenderController;
-use App\Http\Controllers\WorkController;
 use App\Http\Middleware\VerifyTelegramWebhookSecret;
+use App\Models\Deal;
 use App\Models\Estimate;
 use App\Models\Offer;
 use App\Models\Setting;
@@ -28,7 +29,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
-    // Экраны по макету: Тендеры → Карточка → В работе, Шаблон КП, Настройки.
+    // Экраны по макету: Тендеры → Карточка → Сделки, Шаблон КП, Настройки.
     Route::get('/', [TenderController::class, 'index'])->name('home');
     Route::get('tenders/{contract}', [TenderController::class, 'show'])
         ->can('view', 'contract')
@@ -57,8 +58,13 @@ Route::middleware('auth')->group(function (): void {
         Route::put('prices/{item}', [PriceController::class, 'update'])->name('prices.update');
     });
 
-    Route::get('work', [WorkController::class, 'index'])->name('work');
-    Route::put('offers/{offer}', [WorkController::class, 'update'])->name('offers.update');
+    // Сделки: тендеры и заявки клиентов в одной воронке.
+    Route::get('deals', [DealController::class, 'index'])->name('deals');
+    Route::get('deals/{deal}', [DealController::class, 'show'])->can('view', 'deal')->name('deals.show');
+    Route::put('deals/{deal}/status', [DealController::class, 'updateStatus'])->name('deals.status');
+    Route::put('deals/{deal}', [DealController::class, 'update'])->name('deals.update');
+    // Старый адрес экрана «В работе» — на случай закладок.
+    Route::redirect('work', 'deals')->middleware('can:viewAny,'.Deal::class);
 
     Route::middleware('can:update,'.Setting::class)->group(function (): void {
         Route::get('template', [KpTemplateController::class, 'edit'])->name('template');

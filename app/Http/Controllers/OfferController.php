@@ -8,6 +8,7 @@ use App\Enums\OfferChannel;
 use App\Http\Requests\MessengerOfferRequest;
 use App\Models\Contract;
 use App\Models\User;
+use App\Services\DealService;
 use App\Services\KpTemplateService;
 use App\Services\MessengerLinkBuilder;
 use App\Services\OfferException;
@@ -37,7 +38,7 @@ class OfferController extends Controller
         }
 
         return redirect()->route('tenders.show', $contract)
-            ->with('status', 'КП отправлено на '.$contract->company->email.'. Напоминание — через '.OfferService::REMIND_AFTER_DAYS.' дня.');
+            ->with('status', 'КП отправлено на '.$contract->company->email.'. Напоминание — через '.DealService::REMIND_AFTER_DAYS.' дня.');
     }
 
     /** Отмечает КП отправленным и открывает чат: сообщение пользователь отправляет сам. */

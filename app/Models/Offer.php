@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\OfferChannel;
-use App\Enums\OfferStatus;
 use Database\Factories\OfferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,25 +13,33 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * КП победителю по контракту. Победитель и сумма берутся из контракта, здесь не дублируются.
+ * Отправка КП победителю по контракту: канал, когда, кто.
+ * Статус, напоминание и заметка — у сделки (deals).
  *
  * @property int $id
+ * @property int $deal_id
  * @property int $contract_id
- * @property OfferStatus $status
- * @property OfferChannel|null $channel
- * @property Carbon|null $sent_at
- * @property Carbon|null $remind_on
- * @property string|null $note
+ * @property OfferChannel $channel
+ * @property Carbon $sent_at
  * @property int|null $user_id
  * @property Carbon $created_at
  * @property Carbon $updated_at
+ * @property-read Deal $deal
  * @property-read Contract $contract
  */
-#[Fillable(['contract_id', 'status', 'channel', 'sent_at', 'remind_on', 'note', 'user_id'])]
+#[Fillable(['deal_id', 'contract_id', 'channel', 'sent_at', 'user_id'])]
 class Offer extends Model
 {
     /** @use HasFactory<OfferFactory> */
     use HasFactory;
+
+    /**
+     * @return BelongsTo<Deal, $this>
+     */
+    public function deal(): BelongsTo
+    {
+        return $this->belongsTo(Deal::class);
+    }
 
     /**
      * @return BelongsTo<Contract, $this>
@@ -56,10 +63,8 @@ class Offer extends Model
     protected function casts(): array
     {
         return [
-            'status' => OfferStatus::class,
             'channel' => OfferChannel::class,
             'sent_at' => 'datetime',
-            'remind_on' => 'date',
         ];
     }
 }

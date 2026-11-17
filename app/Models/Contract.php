@@ -38,6 +38,7 @@ use Illuminate\Support\Collection;
  * @property-read Company $company
  * @property-read Region $region
  * @property-read Offer|null $offer
+ * @property-read Deal|null $deal
  * @property-read Estimate|null $estimate
  */
 #[Fillable([
@@ -79,6 +80,16 @@ class Contract extends Model
     public function offer(): HasOne
     {
         return $this->hasOne(Offer::class);
+    }
+
+    /**
+     * Сделка по контракту: появляется, когда КП отправлено или тендер отмечен «Не интересно».
+     *
+     * @return HasOne<Deal, $this>
+     */
+    public function deal(): HasOne
+    {
+        return $this->hasOne(Deal::class);
     }
 
     /**
