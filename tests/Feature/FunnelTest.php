@@ -58,9 +58,13 @@ class FunnelTest extends TestCase
         foreach ($report->sources as $row) {
             $bySource[$row['source']->value] = [$row['deals'], $row['contracts'], $row['contractKopecks']];
         }
-        $this->assertSame([5, 1, 100_000_000], $bySource['site']);
-        $this->assertSame([3, 1, 250_000_033], $bySource['tender']);
-        $this->assertSame([0, 0, 0], $bySource['call']);
+        $this->assertSame([
+            'tender' => [3, 1, 250_000_033],
+            'site' => [5, 1, 100_000_000],
+            'call' => [0, 0, 0],
+            'recommendation' => [0, 0, 0],
+            'repeat' => [0, 0, 0],
+        ], $bySource);
     }
 
     public function test_report_filters_by_source_and_handles_empty(): void
