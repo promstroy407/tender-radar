@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\SettingKey;
+use App\Services\SettingsService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class LeadsTokenCommandTest extends TestCase
 {
+    use RefreshDatabase;
+
     private string $dir;
 
     protected function setUp(): void
@@ -32,7 +39,7 @@ class LeadsTokenCommandTest extends TestCase
     public function test_creates_token_once_and_shows_it(): void
     {
         $this->command('leads:token')
-            ->expectsOutputToContain('показывается один раз')
+            ->expectsOutputToContain('показывается здесь')
             ->assertSuccessful();
 
         $env = (string) file_get_contents($this->dir.'/.env');
@@ -64,6 +71,44 @@ class LeadsTokenCommandTest extends TestCase
         $this->command('leads:token')->assertSuccessful();
 
         $this->assertMatchesRegularExpression('/^APP_NAME=Test\nLEADS_API_TOKEN=[0-9a-f]{64}\n$/', (string) file_get_contents($this->dir.'/.env'));
+    }
+
+    public function test_token_is_sent_to_owner_telegram_not_console(): void
+    {
+        config(['services.telegram' => [
+            'bot_token' => '123456:SECRET-bot-token',
+            'api_url' => 'https://tg.example.test/secret-path',
+            'webhook_secret' => null,
+            'updates_mode' => 'polling',
+        ]]);
+        $this->app->make(SettingsService::class)->put(SettingKey::TelegramOwnerChatId, '777');
+        Http::preventStrayRequests();
+        Http::fake(['*/sendMessage' => Http::response(['ok' => true, 'result' => []])]);
+
+        $this->command('leads:token')
+            ->expectsOutputToContain('отправлен вам в Telegram')
+            ->doesntExpectOutputToContain('показывается здесь')
+            ->assertSuccessful();
+
+        preg_match('/^LEADS_API_TOKEN=([0-9a-f]{64})$/m', (string) file_get_contents($this->dir.'/.env'), $match);
+        $token = $match[1] ?? 'missing';
+
+        Http::assertSentCount(2);
+        Http::assertSent(fn (Request $request): bool => $request['chat_id'] === 777 && $request['text'] === $token);
+    }
+
+    public function test_telegram_failure_is_reported(): void
+    {
+        config(['services.telegram' => [
+            'bot_token' => '123456:SECRET-bot-token',
+            'api_url' => 'https://tg.example.test/secret-path',
+            'webhook_secret' => null,
+            'updates_mode' => 'polling',
+        ]]);
+        $this->app->make(SettingsService::class)->put(SettingKey::TelegramOwnerChatId, '777');
+        Http::fake(['*' => Http::failedConnection('timeout')]);
+
+        $this->command('leads:token')->expectsOutputToContain('в Telegram не отправлен')->assertFailed();
     }
 
     public function test_missing_env_file_fails(): void

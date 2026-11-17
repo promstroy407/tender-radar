@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Services\EnvFileWriter;
+use App\Services\Telegram\OwnerChatService;
+use App\Services\Telegram\TelegramApiException;
+use App\Services\Telegram\TelegramBotClient;
+use App\Services\Telegram\TelegramConfigException;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Container\Container;
 use RuntimeException;
 
 /**
  * Создаёт LEADS_API_TOKEN — ключ, с которым сайт es12.ru присылает заявки на /api/leads.
- * Значение пишется в .env сервера и один раз показывается в терминале, чтобы владелец
- * сам вписал его в .env сайта. В чат и в репозиторий оно не попадает.
+ * Значение пишется в .env сервера и отправляется владельцу ботом в Telegram: из веб-консоли
+ * сервера текст не скопировать. Если чат владельца не привязан — показывается в консоли.
+ * В репозиторий и чат с Claude значение не попадает.
  */
 class LeadsTokenCommand extends Command
 {
@@ -19,9 +25,9 @@ class LeadsTokenCommand extends Command
 
     protected $signature = 'leads:token {--force : заменить уже заданный токен (сайт перестанет отправлять заявки, пока не впишете новый)}';
 
-    protected $description = 'Заявки с сайта: создать токен LEADS_API_TOKEN в .env и показать его один раз';
+    protected $description = 'Заявки с сайта: создать токен LEADS_API_TOKEN в .env и прислать его владельцу в Telegram';
 
-    public function handle(EnvFileWriter $env): int
+    public function handle(EnvFileWriter $env, OwnerChatService $owner, Container $container): int
     {
         try {
             if ($env->has(self::KEY) && ! $this->option('force')) {
@@ -48,15 +54,42 @@ class LeadsTokenCommand extends Command
             $this->callSilently('config:cache');
         }
 
+        $chatId = $owner->chatId();
+
+        if ($chatId === null) {
+            $this->showInConsole($token);
+
+            return self::SUCCESS;
+        }
+
+        try {
+            $bot = $container->make(TelegramBotClient::class);
+            $bot->call('sendMessage', [
+                'chat_id' => $chatId,
+                'text' => "Токен для заявок с сайта (LEADS_API_TOKEN) — следующим сообщением.\n"
+                    ."Скопируйте его в .env сайта es12.ru, затем удалите оба сообщения.\n"
+                    .'Никому не пересылайте и не вставляйте в чаты.',
+            ]);
+            $bot->call('sendMessage', ['chat_id' => $chatId, 'text' => $token]);
+        } catch (TelegramApiException|TelegramConfigException $e) {
+            $this->error('Токен записан в .env, но в Telegram не отправлен: '.$e->getMessage());
+            $this->line('Запустите команду ещё раз с --force, когда бот будет на связи.');
+
+            return self::FAILURE;
+        }
+
+        $this->line('Готово: токен записан в .env сервера и отправлен вам в Telegram.');
+
+        return self::SUCCESS;
+    }
+
+    private function showInConsole(string $token): void
+    {
         $this->newLine();
-        $this->line('Токен для заявок с сайта (показывается один раз):');
+        $this->line('Чат для уведомлений не привязан — токен показывается здесь (один раз):');
         $this->newLine();
         $this->line($token);
         $this->newLine();
-        $this->line('1. Скопируйте его и впишите в .env сайта es12.ru — тот же самый.');
-        $this->line('2. Никому не пересылайте: в чат и в файлы проекта его не вставляйте.');
-        $this->line('На сервере Тендер-Радара он уже записан в .env, настройки обновлены.');
-
-        return self::SUCCESS;
+        $this->line('Впишите его в .env сайта es12.ru. Никому не пересылайте.');
     }
 }
