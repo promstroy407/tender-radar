@@ -9,6 +9,9 @@ enum SettingKey: string
     case TelegramBotToken = 'telegram.bot_token';
     case TelegramApiUrl = 'telegram.api_url';
     case TelegramUpdatesMode = 'telegram.updates_mode';
+    // Чат владельца для уведомлений о заявках и одноразовый код привязки (/start <код>).
+    case TelegramOwnerChatId = 'telegram.owner_chat_id';
+    case TelegramLinkCode = 'telegram.link_code';
     case EisToken = 'eis.token';
     case KpSubject = 'kp.subject';
     case KpBody = 'kp.body';

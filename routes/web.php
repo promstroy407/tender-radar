@@ -96,6 +96,8 @@ Route::middleware('auth')->group(function (): void {
             Route::put('/', 'update')->name('.update');
             Route::post('check', 'check')->name('.check');
             Route::post('webhook', 'setWebhook')->name('.webhook');
+            Route::post('owner', 'linkOwner')->name('.owner');
+            Route::delete('owner', 'unlinkOwner')->name('.owner.destroy');
         });
 });
 

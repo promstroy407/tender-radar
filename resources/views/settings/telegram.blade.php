@@ -71,6 +71,29 @@
     </form>
 
     <div class="card">
+        <h2>Уведомления о заявках
+            <span class="badge {{ $ownerLinked ? 'on' : 'off' }}">{{ $ownerLinked ? 'включены' : 'не включены' }}</span>
+        </h2>
+        <p class="muted">Новая заявка с сайта es12.ru придёт сообщением от бота. Нажмите кнопку, откройте ссылку на телефоне и нажмите «Запустить» — уведомления пойдут в этот чат. Ссылка одноразовая.</p>
+        @if (session('owner_link'))
+            <a class="button" href="{{ session('owner_link') }}" target="_blank" rel="noopener">Открыть бота в Telegram</a>
+        @endif
+        <div class="row">
+            <form method="post" action="{{ route('settings.telegram.owner') }}">
+                @csrf
+                <button type="submit" class="secondary">{{ $ownerLinked ? 'Привязать другой чат' : 'Получить ссылку' }}</button>
+            </form>
+            @if ($ownerLinked)
+                <form method="post" action="{{ route('settings.telegram.owner.destroy') }}">
+                    @csrf
+                    @method('delete')
+                    <button type="submit" class="secondary">Отключить</button>
+                </form>
+            @endif
+        </div>
+    </div>
+
+    <div class="card">
         <h2>Проверка</h2>
         <p class="muted">Секрет webhook: {{ $webhookSecretSet ? 'создан на сервере' : 'не создан — выполните telegram:webhook-secret' }}.</p>
         <div class="row">

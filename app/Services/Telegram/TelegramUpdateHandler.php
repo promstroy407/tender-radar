@@ -6,12 +6,14 @@ namespace App\Services\Telegram;
 
 /**
  * Обработка входящих обновлений бота (из webhook или getUpdates).
- * Пока бот умеет одно: на /start присылает кнопку открытия Mini App.
+ * /start — кнопка открытия Mini App; /start <код> из «Настроек → Telegram» —
+ * ещё и привязка чата владельца для уведомлений о заявках.
  */
 class TelegramUpdateHandler
 {
     public function __construct(
         private readonly TelegramBotClient $bot,
+        private readonly OwnerChatService $owner,
         private readonly string $appUrl,
     ) {}
 
@@ -33,9 +35,19 @@ class TelegramUpdateHandler
             return;
         }
 
-        if (preg_match('#^/start(@\w+)?(\s|$)#', $text) === 1) {
-            $this->sendOpenAppButton($chatId);
+        if (preg_match('#^/start(@\w+)?(?=\s|$)\s*(\S*)#', $text, $match) !== 1) {
+            return;
         }
+
+        $code = $match[2];
+        if ($code !== '' && $this->owner->link($code, $chatId)) {
+            $this->bot->call('sendMessage', [
+                'chat_id' => $chatId,
+                'text' => 'Готово: уведомления о новых заявках с сайта будут приходить в этот чат.',
+            ]);
+        }
+
+        $this->sendOpenAppButton($chatId);
     }
 
     private function sendOpenAppButton(int $chatId): void

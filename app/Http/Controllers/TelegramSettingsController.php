@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\SettingKey;
 use App\Http\Requests\TelegramSettingsRequest;
 use App\Services\SettingsService;
+use App\Services\Telegram\OwnerChatService;
 use App\Services\Telegram\TelegramApiException;
 use App\Services\Telegram\TelegramConfigException;
 use App\Services\Telegram\TelegramUpdatesMode;
@@ -26,6 +27,7 @@ class TelegramSettingsController extends Controller
         private readonly SettingsService $settings,
         private readonly Config $config,
         private readonly Container $container,
+        private readonly OwnerChatService $owner,
     ) {}
 
     public function edit(): View
@@ -36,6 +38,7 @@ class TelegramSettingsController extends Controller
             'webhookSecretSet' => filled($this->config->get('services.telegram.webhook_secret')),
             'updatesMode' => $this->settings->get(SettingKey::TelegramUpdatesMode)
                 ?? (string) $this->config->get('services.telegram.updates_mode', TelegramUpdatesMode::Webhook->value),
+            'ownerLinked' => $this->owner->chatId() !== null,
         ]);
     }
 
@@ -73,6 +76,27 @@ class TelegramSettingsController extends Controller
             return 'Webhook установлен: '.$url.'. Ожидают доставки: '.$info['pending']
                 .'. Последняя ошибка: '.($info['last_error'] ?? 'нет').'.';
         });
+    }
+
+    /** Одноразовая ссылка: владелец открывает её в Telegram — чат привязывается к уведомлениям. */
+    public function linkOwner(): RedirectResponse
+    {
+        try {
+            $username = $this->container->make(TelegramWebhookService::class)->botUsername();
+        } catch (TelegramApiException|TelegramConfigException $e) {
+            return redirect()->route('settings.telegram')->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('settings.telegram')
+            ->with('status', 'Откройте ссылку на телефоне и нажмите «Запустить» (Start) в чате с ботом.')
+            ->with('owner_link', $this->owner->linkUrl($username, $this->owner->newLinkCode()));
+    }
+
+    public function unlinkOwner(): RedirectResponse
+    {
+        $this->owner->unlink();
+
+        return redirect()->route('settings.telegram')->with('status', 'Уведомления о заявках отключены.');
     }
 
     /**
