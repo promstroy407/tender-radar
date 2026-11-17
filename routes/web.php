@@ -7,6 +7,7 @@ use App\Http\Controllers\ContractController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\EisSettingsController;
 use App\Http\Controllers\EstimateController;
+use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\KpTemplateController;
 use App\Http\Controllers\OfferController;
 use App\Http\Controllers\PriceController;
@@ -60,6 +61,7 @@ Route::middleware('auth')->group(function (): void {
 
     // Сделки: тендеры и заявки клиентов в одной воронке.
     Route::get('deals', [DealController::class, 'index'])->name('deals');
+    Route::get('funnel', FunnelController::class)->name('funnel');
     Route::get('deals/{deal}', [DealController::class, 'show'])->can('view', 'deal')->name('deals.show');
     Route::put('deals/{deal}/status', [DealController::class, 'updateStatus'])->name('deals.status');
     Route::put('deals/{deal}', [DealController::class, 'update'])->name('deals.update');

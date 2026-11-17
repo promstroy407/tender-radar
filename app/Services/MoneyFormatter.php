@@ -28,6 +28,16 @@ class MoneyFormatter
         return $result.self::NBSP.'₽';
     }
 
+    /** Доля в десятых процента: 455 → «45,5 %»; null → «—». */
+    public function percent(?int $tenths): string
+    {
+        if ($tenths === null) {
+            return '—';
+        }
+
+        return intdiv($tenths, 10).($tenths % 10 === 0 ? '' : ','.($tenths % 10)).self::NBSP.'%';
+    }
+
     /** Для поля ввода: «1500000» или «1500000,50»; пусто, если суммы нет. */
     public function input(?int $kopecks): string
     {

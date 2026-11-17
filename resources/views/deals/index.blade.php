@@ -8,9 +8,7 @@
             <h1>Сделки</h1>
             <p class="sub">Тендеры и заявки клиентов — одна воронка</p>
         </div>
-        @if (Route::has('funnel'))
-            <a class="button secondary" href="{{ route('funnel') }}" style="min-height:40px;font-size:13px">Воронка</a>
-        @endif
+        <a class="button secondary" href="{{ route('funnel', array_filter(['source' => $source?->value])) }}" style="min-height:40px;font-size:13px">Воронка</a>
     </div>
     <nav class="scroll-x" aria-label="Статусы">
         @foreach ($statuses as $item)
