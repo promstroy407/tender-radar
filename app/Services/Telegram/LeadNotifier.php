@@ -19,6 +19,7 @@ class LeadNotifier
         private readonly TelegramBotClient $bot,
         private readonly OwnerChatService $owner,
         private readonly UrlGenerator $url,
+        private readonly string $appUrl,
     ) {}
 
     /** false — чат владельца не привязан, сообщение не отправлялось. */
@@ -36,7 +37,8 @@ class LeadNotifier
             'link_preview_options' => ['is_disabled' => true],
             'reply_markup' => [
                 'inline_keyboard' => [[
-                    ['text' => 'Открыть сделку', 'url' => $this->url->route('deals.show', $deal)],
+                    // Адрес от APP_URL: в очереди нет запроса, по которому его можно было бы узнать.
+                    ['text' => 'Открыть сделку', 'url' => rtrim($this->appUrl, '/').$this->url->route('deals.show', $deal, false)],
                 ]],
             ],
         ]);

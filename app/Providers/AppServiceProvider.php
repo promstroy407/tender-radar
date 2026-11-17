@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Enums\SettingKey;
 use App\Services\Eis\EisConfig;
 use App\Services\SettingsService;
+use App\Services\Telegram\LeadNotifier;
 use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramUpdateHandler;
 use App\Services\Telegram\TelegramWebhookService;
@@ -49,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->when([TelegramUpdateHandler::class, TelegramWebhookService::class])
+        $this->app->when([TelegramUpdateHandler::class, TelegramWebhookService::class, LeadNotifier::class])
             ->needs('$appUrl')
             ->giveConfig('app.url');
     }
