@@ -10,6 +10,7 @@ use App\Models\Deal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class LeadsApiTest extends TestCase
@@ -138,7 +139,7 @@ class LeadsApiTest extends TestCase
 
     /**
      * @param  array<string, mixed>  $overrides
-     * @return TestResponse<\Symfony\Component\HttpFoundation\Response>
+     * @return TestResponse<Response>
      */
     private function sendLead(array $overrides = []): TestResponse
     {
