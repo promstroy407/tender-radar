@@ -23,27 +23,24 @@ class DealsTest extends TestCase
 
     public function test_deals_screen_lists_by_status_and_source(): void
     {
-        $lead = Deal::factory()->create(['organization' => 'ООО «Квартал»']);
+        Deal::factory()->create(['organization' => 'ООО «Квартал»']);
         $tender = Deal::factory()->tender()->status(DealStatus::New)->create();
-        $talk = Deal::factory()->status(DealStatus::Negotiation)->create(['organization' => 'ИП Петров']);
+        Deal::factory()->status(DealStatus::Negotiation)->create(['organization' => 'ИП Петров']);
 
         $this->actingAs($this->admin())->get('/deals')
             ->assertOk()
             ->assertSee('ООО «Квартал»')
-            ->assertSee($tender->company?->name ?? '')
+            ->assertSee($tender->company->name ?? '')
             ->assertDontSee('ИП Петров');
 
         $this->actingAs($this->admin())->get('/deals?status=new&source=site')
             ->assertOk()
             ->assertSee('ООО «Квартал»')
-            ->assertDontSee($tender->company?->name ?? '');
+            ->assertDontSee($tender->company->name ?? '');
 
         $this->actingAs($this->admin())->get('/deals?status=negotiation')
             ->assertOk()
             ->assertSee('ИП Петров');
-
-        $this->assertNotNull($lead->id);
-        $this->assertNotNull($talk->id);
     }
 
     public function test_deals_screen_validates_filters_and_access(): void

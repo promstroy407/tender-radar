@@ -86,7 +86,7 @@ class Deal extends Model
     /** Как называть клиента в списке: организация, имя или победитель тендера. */
     public function title(): string
     {
-        return $this->organization ?? $this->company?->name ?? $this->name ?? 'Сделка №'.$this->id;
+        return $this->organization ?? $this->company->name ?? $this->name ?? 'Сделка №'.$this->id;
     }
 
     /** Остаток к оплате по договору; null — сумма договора не указана. */
