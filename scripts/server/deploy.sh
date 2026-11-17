@@ -18,6 +18,9 @@ docker compose run --rm app php artisan db:seed --force
 docker compose run --rm --no-deps app php artisan optimize
 
 docker compose up -d --remove-orphans
+# Перезапуск обрывает задачи планировщика; их метки «уже идёт» снимаем, иначе задача
+# (например, опрос Telegram) пропускалась бы до истечения метки.
+docker compose run --rm --no-deps app php artisan schedule:clear-cache
 docker compose restart queue scheduler
 
 # Нормативы ГЭСН и ставки труда: если ещё не загружены или устарели — в очередь (не блокирует выкладку).

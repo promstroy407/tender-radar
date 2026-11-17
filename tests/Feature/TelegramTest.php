@@ -8,6 +8,8 @@ use App\Services\Telegram\TelegramApiException;
 use App\Services\Telegram\TelegramBotClient;
 use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramConfigException;
+use Illuminate\Console\Scheduling\Event;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -216,6 +218,18 @@ class TelegramTest extends TestCase
             && $request['timeout'] === 25 && $request['offset'] === 0);
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/sendMessage'));
         $this->assertSame(8, cache()->get('telegram:updates-offset'));
+    }
+
+    public function test_poll_lock_expires_quickly_if_run_is_interrupted(): void
+    {
+        $events = array_values(array_filter(
+            $this->app->make(Schedule::class)->events(),
+            fn (Event $event): bool => str_contains((string) $event->command, 'telegram:poll'),
+        ));
+
+        $this->assertCount(1, $events);
+        $this->assertTrue($events[0]->withoutOverlapping);
+        $this->assertSame(2, $events[0]->expiresAt);
     }
 
     private function bot(): TelegramBotClient

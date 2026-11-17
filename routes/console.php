@@ -11,7 +11,9 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Запасной режим Telegram (TELEGRAM_UPDATES_MODE=polling); в режиме webhook команда сразу выходит.
-Schedule::command('telegram:poll')->everyMinute()->withoutOverlapping();
+// Опрос длится до 35 секунд. Метка «уже идёт» живёт 2 минуты, а не сутки: если опрос
+// оборвался (перезапуск при выкладке), бот не замолкает до завтра.
+Schedule::command('telegram:poll')->everyMinute()->withoutOverlapping(2);
 
 // Нормативы ГЭСН и ставки труда (ФГИС ЦС публикует их поквартально): раз в неделю, ночью.
 Schedule::command('normatives:sync --if-stale=7')->dailyAt('03:17')->withoutOverlapping();
