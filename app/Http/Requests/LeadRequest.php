@@ -76,7 +76,8 @@ class LeadRequest extends FormRequest
     {
         return new LeadData(
             externalId: $this->text('external_id') ?? '',
-            receivedAt: Carbon::parse($this->text('received_at') ?? 'now'),
+            // В часовой пояс приложения: так база хранит все остальные даты.
+            receivedAt: Carbon::parse($this->text('received_at') ?? 'now')->setTimezone(date_default_timezone_get()),
             name: $this->text('name') ?? '',
             phone: $this->text('phone') ?? '',
             email: $this->text('email'),

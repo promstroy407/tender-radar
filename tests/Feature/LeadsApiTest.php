@@ -116,7 +116,10 @@ class LeadsApiTest extends TestCase
         $this->sendLead(['external_id' => 'es12-1', 'received_at' => '2026-11-17T11:05:00Z'])->assertCreated();
         $this->sendLead(['external_id' => 'es12-2', 'received_at' => '2026-11-17T11:05:00.123+00:00'])->assertCreated();
 
-        $this->assertSame(2, Deal::query()->count());
+        $this->assertSame(
+            ['2026-11-17 11:05:00', '2026-11-17 11:05:00'],
+            Deal::query()->orderBy('id')->get()->map(fn (Deal $deal): string => (string) $deal->received_at?->utc()->format('Y-m-d H:i:s'))->all(),
+        );
     }
 
     public function test_more_than_30_requests_per_minute_gives_429(): void
