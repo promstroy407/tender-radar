@@ -31,7 +31,7 @@ class LeadsTokenCommandTest extends TestCase
 
     public function test_creates_token_once_and_shows_it(): void
     {
-        $this->artisan('leads:token')
+        $this->command('leads:token')
             ->expectsOutputToContain('показывается один раз')
             ->assertSuccessful();
 
@@ -41,16 +41,16 @@ class LeadsTokenCommandTest extends TestCase
         $this->assertStringContainsString('APP_NAME=Test', $env);
 
         // Повторный запуск не меняет токен и не показывает его.
-        $this->artisan('leads:token')->expectsOutputToContain('Токен уже задан')->assertSuccessful();
+        $this->command('leads:token')->expectsOutputToContain('Токен уже задан')->assertSuccessful();
         $this->assertSame($env, file_get_contents($this->dir.'/.env'));
     }
 
     public function test_force_replaces_token(): void
     {
-        $this->artisan('leads:token')->assertSuccessful();
+        $this->command('leads:token')->assertSuccessful();
         $before = (string) file_get_contents($this->dir.'/.env');
 
-        $this->artisan('leads:token', ['--force' => true])->assertSuccessful();
+        $this->command('leads:token', ['--force' => true])->assertSuccessful();
         $after = (string) file_get_contents($this->dir.'/.env');
 
         $this->assertNotSame($before, $after);
@@ -61,7 +61,7 @@ class LeadsTokenCommandTest extends TestCase
     {
         file_put_contents($this->dir.'/.env', 'APP_NAME=Test');
 
-        $this->artisan('leads:token')->assertSuccessful();
+        $this->command('leads:token')->assertSuccessful();
 
         $this->assertMatchesRegularExpression('/^APP_NAME=Test\nLEADS_API_TOKEN=[0-9a-f]{64}\n$/', (string) file_get_contents($this->dir.'/.env'));
     }
@@ -70,6 +70,6 @@ class LeadsTokenCommandTest extends TestCase
     {
         unlink($this->dir.'/.env');
 
-        $this->artisan('leads:token')->expectsOutputToContain('.env не найден')->assertFailed();
+        $this->command('leads:token')->expectsOutputToContain('.env не найден')->assertFailed();
     }
 }
