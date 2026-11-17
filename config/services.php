@@ -48,6 +48,12 @@ return [
         'url_44' => env('EIS_URL_44', 'https://int44.zakupki.gov.ru/eis-integration/services/getDocsIP'),
     ],
 
+    // Заявки с сайта es12.ru на POST /api/leads. Токен создаётся на сервере командой
+    // php artisan leads:token; тот же владелец вписывает в .env сайта.
+    'leads' => [
+        'token' => env('LEADS_API_TOKEN'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

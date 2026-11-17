@@ -11,7 +11,10 @@ use App\Services\Telegram\TelegramConfig;
 use App\Services\Telegram\TelegramUpdateHandler;
 use App\Services\Telegram\TelegramWebhookService;
 use Illuminate\Contracts\Config\Repository as Config;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -56,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Заявки с сайта: не больше 30 запросов в минуту, дальше — 429.
+        RateLimiter::for('leads', fn (Request $request): Limit => Limit::perMinute(30)->by('leads'));
     }
 }

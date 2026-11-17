@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Data\DealChange;
+use App\Data\LeadData;
 use App\Enums\DealSource;
 use App\Enums\DealStatus;
 use App\Models\Contract;
 use App\Models\Deal;
 use App\Models\User;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,6 +23,10 @@ class DealService
 {
     /** Через сколько дней напомнить о себе, если клиент молчит. */
     public const REMIND_AFTER_DAYS = 3;
+
+    public function __construct(
+        private readonly ConnectionInterface $db,
+    ) {}
 
     /** КП победителю отправлено: сделка по контракту создаётся или переходит на «КП отправлено». */
     public function markOfferSent(Contract $contract, User $user): Deal
@@ -74,6 +81,45 @@ class DealService
         ])->save();
 
         return $deal;
+    }
+
+    /**
+     * Заявка с сайта. Повтор с тем же external_id ничего не дублирует.
+     *
+     * @return array{0: Deal, 1: bool} сделка и признак «создана сейчас»
+     */
+    public function createFromLead(LeadData $lead): array
+    {
+        $existing = Deal::query()->where('external_id', $lead->externalId)->first();
+        if ($existing !== null) {
+            return [$existing, false];
+        }
+
+        try {
+            // Своя точка сохранения: ошибка уникальности не должна ломать внешнюю транзакцию.
+            $deal = $this->db->transaction(fn (): Deal => Deal::query()->create([
+                'source' => DealSource::Site,
+                'status' => DealStatus::New,
+                'reached_status' => DealStatus::New,
+                'external_id' => $lead->externalId,
+                'received_at' => $lead->receivedAt,
+                'name' => $lead->name,
+                'phone' => $lead->phone,
+                'email' => $lead->email,
+                'organization' => $lead->organization,
+                'facility' => $lead->facility,
+                'service' => $lead->service,
+                'origin' => $lead->origin,
+                'message' => $lead->message,
+                'estimate' => $lead->estimate,
+                'source_url' => $lead->sourceUrl,
+            ]));
+        } catch (UniqueConstraintViolationException) {
+            // Два одинаковых запроса пришли одновременно — второй получает уже созданную.
+            return [Deal::query()->where('external_id', $lead->externalId)->firstOrFail(), false];
+        }
+
+        return [$deal, true];
     }
 
     /**

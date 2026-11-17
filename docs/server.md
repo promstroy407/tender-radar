@@ -23,6 +23,24 @@ journalctl -u tender-radar-deploy.service -n 50
 
 Ежедневно в 3:30 `pg_dump` в `/opt/backups/db-ГГГГ-ММ-ДД.sql.gz`, хранятся 14 дней.
 
+## Заявки с сайта es12.ru
+
+Сайт отправляет заявки на `POST https://tender.es12.ru/api/leads` с заголовком
+`Authorization: Bearer <LEADS_API_TOKEN>`. Каждая заявка — сделка «Сайт / Новая».
+Ответы: 201 — создана, 200 — такой `external_id` уже был, 401 — нет или неверный токен,
+422 — ошибки полей, 429 — больше 30 запросов в минуту.
+
+Токен создаётся на сервере и показывается один раз (в репозиторий и чат не попадает):
+
+```
+cd /opt/tender-radar
+docker compose run --rm --no-deps app php artisan leads:token
+```
+
+Команда пишет `LEADS_API_TOKEN` в `.env` и обновляет кэш настроек. То же значение
+владелец сам вписывает в `.env` сайта. Новый токен — `leads:token --force`, после чего
+обновить его и на сайте; затем `docker compose up -d`, чтобы контейнеры перечитали `.env`.
+
 ## Telegram через пересыльщик
 
 С московских серверов FirstVDS `api.telegram.org` недоступен. Все запросы к Bot API идут

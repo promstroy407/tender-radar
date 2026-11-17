@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\EnvFileWriter;
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Foundation\Application;
+use RuntimeException;
 
 /**
  * Создаёт TELEGRAM_WEBHOOK_SECRET прямо в .env, не показывая его.
@@ -19,33 +20,21 @@ class TelegramWebhookSecretCommand extends Command
 
     protected $description = 'Telegram: создать секрет webhook в .env (значение не выводится)';
 
-    public function handle(Application $app): int
+    public function handle(EnvFileWriter $env): int
     {
-        $path = $app->environmentFilePath();
+        try {
+            if ($env->has(self::KEY) && ! $this->option('force')) {
+                $this->line('Секрет уже задан. Заменить: --force (после этого нужно снова telegram:webhook set).');
 
-        if (! is_file($path) || ! is_writable($path)) {
-            $this->error('Файл .env не найден или недоступен для записи: '.$path);
+                return self::SUCCESS;
+            }
+
+            $env->put(self::KEY, $env->randomSecret());
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
 
             return self::FAILURE;
         }
-
-        $contents = (string) file_get_contents($path);
-        $pattern = '/^'.self::KEY.'=(.*)$/m';
-        $hasValue = preg_match($pattern, $contents, $match) === 1 && trim($match[1]) !== '';
-
-        if ($hasValue && ! $this->option('force')) {
-            $this->line('Секрет уже задан. Заменить: --force (после этого нужно снова telegram:webhook set).');
-
-            return self::SUCCESS;
-        }
-
-        $line = self::KEY.'='.bin2hex(random_bytes(32));
-
-        $contents = preg_match($pattern, $contents) === 1
-            ? (string) preg_replace($pattern, $line, $contents, 1)
-            : rtrim($contents, "\n")."\n".$line."\n";
-
-        file_put_contents($path, $contents);
 
         $this->line('Секрет webhook записан в .env. Обновите кэш настроек: php artisan optimize');
 
