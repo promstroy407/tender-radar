@@ -19,6 +19,9 @@ class LoadDocumentsIntoEstimate implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
+    /** Отдельная очередь: воркер берёт её раньше общей (сбор контрактов идёт часами). */
+    public const QUEUE = 'documents';
+
     public int $timeout = 1200;
 
     public int $tries = 1;
@@ -26,7 +29,9 @@ class LoadDocumentsIntoEstimate implements ShouldBeUnique, ShouldQueue
     public function __construct(
         public readonly int $contractId,
         public readonly int $userId,
-    ) {}
+    ) {
+        $this->onQueue(self::QUEUE);
+    }
 
     public function uniqueId(): string
     {

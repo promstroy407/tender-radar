@@ -19,6 +19,9 @@ class FetchContractDocuments implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
+    /** Отдельная очередь: воркер берёт её раньше общей (сбор контрактов идёт часами). */
+    public const QUEUE = 'documents';
+
     public int $timeout = 300;
 
     public int $tries = 2;
@@ -27,7 +30,9 @@ class FetchContractDocuments implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         public readonly int $contractId,
-    ) {}
+    ) {
+        $this->onQueue(self::QUEUE);
+    }
 
     public function uniqueId(): string
     {

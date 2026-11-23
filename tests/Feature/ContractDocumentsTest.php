@@ -114,10 +114,10 @@ class ContractDocumentsTest extends TestCase
         $contract = Contract::factory()->create(['notification_number' => self::NOTICE]);
 
         $this->actingAs($admin)->post('/tenders/'.$contract->id.'/documents')->assertRedirect('/tenders/'.$contract->id);
-        Queue::assertPushed(FetchContractDocuments::class, fn (FetchContractDocuments $job): bool => $job->contractId === $contract->id);
+        Queue::assertPushedOn('documents', FetchContractDocuments::class, fn (FetchContractDocuments $job): bool => $job->contractId === $contract->id);
 
         $this->actingAs($admin)->post('/tenders/'.$contract->id.'/documents/estimate')->assertRedirect('/tenders/'.$contract->id.'/estimate');
-        Queue::assertPushed(LoadDocumentsIntoEstimate::class, fn (LoadDocumentsIntoEstimate $job): bool => $job->contractId === $contract->id && $job->userId === $admin->id);
+        Queue::assertPushedOn('documents', LoadDocumentsIntoEstimate::class, fn (LoadDocumentsIntoEstimate $job): bool => $job->contractId === $contract->id && $job->userId === $admin->id);
 
         $user = User::factory()->create();
         $this->actingAs($user)->post('/tenders/'.$contract->id.'/documents')->assertForbidden();

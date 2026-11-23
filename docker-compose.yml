@@ -19,7 +19,8 @@ services:
       dockerfile: docker/php/Dockerfile
     restart: unless-stopped
     env_file: .env
-    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    # Сначала очередь documents (документация по кнопке — человек ждёт), потом общая.
+    command: php artisan queue:work --queue=documents,default --sleep=3 --tries=3 --max-time=3600
     volumes:
       - ./:/var/www/html
     depends_on:
