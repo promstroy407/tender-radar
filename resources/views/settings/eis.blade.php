@@ -30,6 +30,36 @@
     </form>
 
     <div class="card">
+        <h2>Сбор контрактов</h2>
+        <p class="muted">Каждое утро сервер забирает из реестра контрактов 44-ФЗ новые контракты по включённым регионам за последние 3 дня и оставляет наши: электромонтаж, слаботочку, пожарку и генподряд. Они появляются в «Тендерах».</p>
+        <form method="post" action="{{ route('settings.eis.import') }}">
+            @csrf
+            <button type="submit" class="secondary">Загрузить за {{ $backfillDays }} дней</button>
+        </form>
+        @if ($importLog !== [])
+            <table class="report">
+                <thead><tr><th>День</th><th>Регион</th><th class="num">Файлов</th><th class="num">Наших</th></tr></thead>
+                <tbody>
+                    @foreach ($importLog as $row)
+                        <tr>
+                            <td>{{ \Illuminate\Support\Carbon::parse($row['date'])->format('d.m') }}</td>
+                            <td>{{ $regionNames[$row['region']] ?? $row['region'] }}</td>
+                            @if ($row['error'])
+                                <td colspan="2" class="error">{{ $row['error'] }}</td>
+                            @else
+                                <td class="num">{{ $row['files'] }}</td>
+                                <td class="num"><b>{{ $row['saved'] }}</b></td>
+                            @endif
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @else
+            <p class="muted">Сбор ещё не запускался.</p>
+        @endif
+    </div>
+
+    <div class="card">
         <h2>Проверка доступа</h2>
         <p class="muted">Сервер запросит у ЕИС схему сервиса и реестр контрактов Марий Эл за последний рабочий день.</p>
         <form method="post" action="{{ route('settings.eis.probe') }}">

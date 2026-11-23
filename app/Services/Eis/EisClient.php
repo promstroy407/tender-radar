@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Eis;
 
+use App\Services\Sleeper;
 use DOMDocument;
 use DOMNode;
 use DOMNodeList;
@@ -28,6 +29,7 @@ class EisClient
     public function __construct(
         private readonly HttpFactory $http,
         private readonly EisConfig $config,
+        private readonly Sleeper $sleeper,
     ) {}
 
     /**
@@ -70,6 +72,24 @@ class EisClient
         }
 
         return $response->body();
+    }
+
+    /** Архив ЕИС формирует не сразу: пробуем скачать несколько раз с паузой (до минуты). */
+    public function downloadWhenReady(string $url, int $attempts = 6, int $pauseSeconds = 10): string
+    {
+        $last = new EisException('ЕИС: архив не скачан.');
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                return $this->downloadArchive($url);
+            } catch (EisException $e) {
+                $last = $e;
+                if ($attempt < $attempts) {
+                    $this->sleeper->sleep($pauseSeconds);
+                }
+            }
+        }
+
+        throw $last;
     }
 
     /** XSD сервиса — в нём перечислены допустимые подсистемы и типы документов. */

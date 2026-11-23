@@ -70,7 +70,9 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            // Дольше самого длинного задания (нормативы — до 1800 с), иначе задание,
+            // которое ещё выполняется, запустилось бы повторно.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 1900),
             'block_for' => null,
             'after_commit' => false,
         ],

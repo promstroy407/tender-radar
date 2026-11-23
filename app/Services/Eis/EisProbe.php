@@ -60,7 +60,7 @@ class EisProbe
             $report['archives'] = count($urls);
 
             if ($urls !== []) {
-                $report['sample'] = $this->sample($this->downloadWhenReady($urls[0]));
+                $report['sample'] = $this->sample($this->client->downloadWhenReady($urls[0]));
             }
 
             $report['ok'] = true;
@@ -168,22 +168,6 @@ class EisProbe
         }
 
         return null;
-    }
-
-    /** Архив формируется не сразу: пробуем скачать до минуты. */
-    private function downloadWhenReady(string $url): string
-    {
-        $last = new EisException('ЕИС: архив не скачан.');
-        for ($attempt = 0; $attempt < 6; $attempt++) {
-            try {
-                return $this->client->downloadArchive($url);
-            } catch (EisException $e) {
-                $last = $e;
-                sleep(10);
-            }
-        }
-
-        throw $last;
     }
 
     /**

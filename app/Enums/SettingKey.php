@@ -13,6 +13,8 @@ enum SettingKey: string
     case TelegramOwnerChatId = 'telegram.owner_chat_id';
     case TelegramLinkCode = 'telegram.link_code';
     case EisToken = 'eis.token';
+    // Журнал сбора контрактов из ЕИС: последние запуски по регионам и дням (JSON).
+    case EisImportLog = 'eis.import_log';
     case KpSubject = 'kp.subject';
     case KpBody = 'kp.body';
     case KpDailyLimit = 'kp.daily_limit';

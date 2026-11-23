@@ -17,3 +17,6 @@ Schedule::command('telegram:poll')->everyMinute()->withoutOverlapping(2);
 
 // Нормативы ГЭСН и ставки труда (ФГИС ЦС публикует их поквартально): раз в неделю, ночью.
 Schedule::command('normatives:sync --if-stale=7')->dailyAt('03:17')->withoutOverlapping();
+
+// Сбор контрактов из ЕИС за последние 3 дня: ЕИС публикует с задержкой, повтор не дублирует.
+Schedule::command('eis:import --days=3')->dailyAt('05:41')->withoutOverlapping(30);

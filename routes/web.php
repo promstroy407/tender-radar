@@ -87,6 +87,7 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/', 'edit');
             Route::put('/', 'update')->name('.update');
             Route::post('probe', 'probe')->name('.probe');
+            Route::post('import', 'import')->name('.import');
         });
 
     Route::prefix('settings/telegram')->name('settings.telegram')

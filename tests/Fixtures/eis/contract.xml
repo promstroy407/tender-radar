@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns3:export xmlns="http://zakupki.gov.ru/oos/types/1" xmlns:ns2="http://zakupki.gov.ru/oos/base/1" xmlns:ns4="http://zakupki.gov.ru/oos/common/1" xmlns:ns3="http://zakupki.gov.ru/oos/export/1">
+    <ns3:contract schemeVersion="16.3">
+        <id>100</id>
+        <publishDate>2026-11-20T07:43:57.256+03:00</publishDate>
+        <versionNumber>0</versionNumber>
+        <customer>
+            <regNum>03082000066</regNum>
+            <fullName>ГБОУ «ШКОЛА № 1» (ВЫМЫШЛЕННЫЙ ЗАКАЗЧИК)</fullName>
+            <shortName>ГБОУ Школа 1</shortName>
+            <inn>1200000001</inn>
+            <kpp>120001001</kpp>
+        </customer>
+        <signDate>2026-11-20</signDate>
+        <regNum>{{REGNUM}}</regNum>
+        <contractSubject>{{SUBJECT}}</contractSubject>
+        <priceInfo>
+            <price>{{PRICE}}</price>
+            <currency><code>RUB</code></currency>
+        </priceInfo>
+        <executionPeriod>
+            <startDate>2026-11-20</startDate>
+            <endDate>2027-03-31</endDate>
+        </executionPeriod>
+        <products>
+            <product>
+                <OKPD2>
+                    <code>{{OKPD2}}</code>
+                    <name>Работы</name>
+                </OKPD2>
+                <name>{{PRODUCT}}</name>
+                <price>1.00</price>
+            </product>
+        </products>
+        <suppliersInfo>
+            <supplierInfo>
+                <legalEntityRF>
+                    <EGRULInfo>
+                        <fullName>ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ "ПРИМЕР-МОНТАЖ"</fullName>
+                        <shortName>ООО "ПРИМЕР-МОНТАЖ"</shortName>
+                        <INN>{{INN}}</INN>
+                        <KPP>121501001</KPP>
+                        <address>424008, РЕСПУБЛИКА МАРИЙ ЭЛ, Г. ЙОШКАР-ОЛА, УЛ. ПРИМЕРНАЯ, Д. 1</address>
+                    </EGRULInfo>
+                    <otherInfo>
+                        <contactEMail>Info@Primer-Montazh.test</contactEMail>
+                        <contactPhone>7 9000000001</contactPhone>
+                    </otherInfo>
+                </legalEntityRF>
+                <supplierAccountsDetails>
+                    <supplierAccountDetails>
+                        <INN>9999999999</INN>
+                        <bik>042202824</bik>
+                    </supplierAccountDetails>
+                </supplierAccountsDetails>
+            </supplierInfo>
+        </suppliersInfo>
+    </ns3:contract>
+</ns3:export>
