@@ -12,7 +12,8 @@ use App\Enums\WorkSection;
 /**
  * Наш ли контракт: профильный (электромонтаж, слаботочка, пожарка) или генподряд
  * (стройка, реконструкция, капремонт). Документации закупки в реестре контрактов нет —
- * решаем по предмету контракта и кодам ОКПД2 позиций.
+ * решаем по предмету контракта, а коды ОКПД2 и позиции только дополняют его:
+ * в сметах ремонта почти всегда есть «замена розеток», это ещё не электромонтаж.
  */
 class ContractClassifier
 {
@@ -22,17 +23,26 @@ class ContractClassifier
     /** ОКПД2 генподряда: здания (41.2), отделка (43.3), прочие строительные (43.99, 42.99). */
     private const GENERAL_OKPD2 = ['41.2', '43.3', '43.99', '42.99'];
 
-    /** Без работ это поставка или услуга, а не подряд. */
-    private const WORKS = '/монтаж|ремонт|устройств|замен|модерниз|прокладк|реконструк|строительств|оснащени|установк|переустройств|переклад/u';
+    /** Признаки подряда в предмете. */
+    private const WORKS = '/монтаж|ремонт|устройств|замен|модерниз|прокладк|реконструк|строительств|оснащени|установк|переустройств|переклад|переоборудован/u';
 
-    private const GENERAL_SUBJECT = '/капитальн\w*\s+ремонт|реконструкци|строительств\w*\s+(?!материал)|ремонт\w*\s+(?:здани|помещени|корпус|кровл|фасад)/u';
+    private const GENERAL_SUBJECT = '/капитальн\w*\s+ремонт|реконструкци|строительств\w*\s+(?!материал)|ремонт\w*\s+(?:здани|помещени|корпус)|переоборудован\w*\s+помещени/u';
 
-    /** Только обслуживание или проектирование, без работ — субподряд на монтаж не нужен. */
-    private const EXCLUDE = '/^(?!.*(?:монтаж|ремонт|замен|строительств|реконструк|устройств|прокладк)).*(?:обслуживани|проектн|проектировани|изыскани|экспертиз)/us';
+    /** Не подряд на монтаж: поставка, услуги, изготовление, проектирование, ИТ. */
+    private const NOT_WORKS = [
+        '/^поставк(?!.*(?:монтаж|установк))/u',
+        '/^оказани\w*\s+услуг(?!.*монтаж)/u',
+        '/^(?:выполнени\w*\s+работ\w*\s+по\s+)?изготовлени(?!.*монтаж)/u',
+        '/информационн\w*\s+систем|программн\w*\s+обеспечени|аттестаци/u',
+        '/^(?!.*(?:монтаж|ремонт|замен|строительств|реконструк|устройств|прокладк)).*(?:обслуживани|проектн|проектировани|\bпсд\b|\bпд\b|\bрд\b|изыскани|экспертиз|разработк)/u',
+    ];
+
+    /** Генподряд не про наши разделы: окна, кровля, фасад, сети тепла и воды, дороги. */
+    private const GENERAL_NOT_OURS = '/окон|оконн|витраж|кровл|фасад|крыльц|санитарн|санузл|асфальт|дорог|тротуар|ограждени|благоустройств|теплов\w*\s+сет|водопровод|водоснабж|канализац|отоплени|лифт|покраск|окраск/u';
 
     /** @var array<string, string> раздел => признак в тексте */
     private const SECTIONS = [
-        'eom' => '/электро(?!нн)|освещени|электроснабж|кабельн\w*\s+лини|\bкл\s?-?\s?0[,.]4|\bвл\s?-?\s?\d|щит\w*\s+(?:учёт|учет|распред)|вру\b|\bтп\b|трансформаторн/u',
+        'eom' => '/электро(?!нн|кардио|мобил)|освещени|электроснабж|кабельн\w*\s+лини|\bкл\s?-?\s?0[,.]4|\bвл\s?-?\s?\d|щит\w*\s+(?:учёт|учет|распред)|\bвру\b|\bтп\b|трансформаторн/u',
         'ss' => '/сет\w*\s+связ|телефони|радиофикац|телевиден|\bсс\b/u',
         'aps' => '/пожарн\w*\s+сигнал|\bапс\b|\bаупс\b|пожарн\w*\s+автоматик|систем\w*\s+пожар/u',
         'soue' => '/оповещени|\bсоуэ\b/u',
@@ -46,29 +56,30 @@ class ContractClassifier
 
     public function classify(ParsedContract $contract): ?ContractClassification
     {
-        $texts = [$contract->subject];
-        foreach ($contract->products as $product) {
-            $texts[] = $product->name;
-        }
-        $text = mb_strtolower(implode("\n", $texts));
+        $subject = mb_strtolower(trim($contract->subject));
 
-        if (preg_match(self::EXCLUDE, mb_strtolower($contract->subject)) === 1) {
-            return null;
-        }
-
-        $sections = $this->sections($text);
-        $hasWorks = preg_match(self::WORKS, $text) === 1;
-
-        if ($this->hasOkpd2($contract, self::PROFILE_OKPD2) || ($hasWorks && $sections !== [])) {
-            if ($sections === []) {
-                $sections = [WorkSection::Eom];
+        foreach (self::NOT_WORKS as $pattern) {
+            if (preg_match($pattern, $subject) === 1) {
+                return null;
             }
-
-            return new ContractClassification(ContractKind::Profile, $sections);
         }
 
-        if ($this->hasOkpd2($contract, self::GENERAL_OKPD2) || preg_match(self::GENERAL_SUBJECT, $text) === 1) {
-            return new ContractClassification(ContractKind::General, $sections !== [] ? $sections : self::GENERAL_DEFAULT);
+        $texts = [$subject];
+        foreach ($contract->products as $product) {
+            $texts[] = mb_strtolower($product->name);
+        }
+        $allSections = $this->sections(implode("\n", $texts));
+        $subjectSections = $this->sections($subject);
+
+        if ($this->hasOkpd2($contract, self::PROFILE_OKPD2)
+            || (preg_match(self::WORKS, $subject) === 1 && $subjectSections !== [])) {
+            return new ContractClassification(ContractKind::Profile, $allSections !== [] ? $allSections : [WorkSection::Eom]);
+        }
+
+        $general = $this->hasOkpd2($contract, self::GENERAL_OKPD2) || preg_match(self::GENERAL_SUBJECT, $subject) === 1;
+
+        if ($general && preg_match(self::GENERAL_NOT_OURS, $subject) !== 1) {
+            return new ContractClassification(ContractKind::General, $allSections !== [] ? $allSections : self::GENERAL_DEFAULT);
         }
 
         return null;

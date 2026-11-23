@@ -11,6 +11,7 @@ use App\Enums\WorkSection;
 use App\Jobs\ImportEisDay;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Models\Deal;
 use App\Models\Region;
 use App\Models\User;
 use App\Services\Eis\EisImporter;
@@ -109,6 +110,23 @@ class EisImportTest extends TestCase
         $this->assertSame('boss@found.test', $company->email);
         $this->assertSame('+79001112233', $company->phone);
         $this->assertSame('ООО "ПРИМЕР-МОНТАЖ"', $company->name);
+    }
+
+    public function test_contract_that_no_longer_matches_is_removed_unless_in_work(): void
+    {
+        $this->app->make(SettingsService::class)->put(SettingKey::EisToken, self::TOKEN);
+        $stale = Contract::factory()->create(['law' => ProcurementLaw::Fz44, 'registry_number' => '2001', 'region_code' => '12']);
+        $inWork = Contract::factory()->create(['law' => ProcurementLaw::Fz44, 'registry_number' => '2002', 'region_code' => '12']);
+        Deal::factory()->tender()->create(['contract_id' => $inWork->id]);
+        $this->fakeEis([
+            'contract_1.xml' => $this->contract('2001', 'Поставка красок для ремонта помещений', '2000000.00', '20.30.12.000', '1215000001'),
+            'contract_2.xml' => $this->contract('2002', 'Поставка красок для ремонта помещений', '2000000.00', '20.30.12.000', '1215000002'),
+        ]);
+
+        $this->command('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
+
+        $this->assertNull(Contract::query()->find($stale->id));
+        $this->assertNotNull(Contract::query()->find($inWork->id));
     }
 
     public function test_missing_token_is_logged(): void

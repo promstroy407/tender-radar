@@ -50,6 +50,8 @@ class EisImporter
 
                 $classification = $this->classifier->classify($contract);
                 if ($classification === null || $contract->supplier === null) {
+                    $this->forget($contract->registryNumber);
+
                     continue;
                 }
                 $matched++;
@@ -96,6 +98,20 @@ class EisImporter
                 ],
             );
         });
+    }
+
+    /**
+     * Контракт больше не проходит отбор (правила уточнили) — убираем из ленты,
+     * если по нему ещё ничего не делали: ни сделки, ни сметы.
+     */
+    private function forget(string $registryNumber): void
+    {
+        Contract::query()
+            ->where('law', ProcurementLaw::Fz44)
+            ->where('registry_number', $registryNumber)
+            ->whereDoesntHave('deal')
+            ->whereDoesntHave('estimate')
+            ->delete();
     }
 
     /**
