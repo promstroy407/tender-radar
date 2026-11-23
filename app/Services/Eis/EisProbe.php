@@ -21,7 +21,8 @@ class EisProbe
 {
     public const REPORT_PATH = 'eis/probe.json';
 
-    private const SAMPLE_CHARS = 6000;
+    // Образец нужен целиком: по нему пишется разбор (победитель, сумма, позиции ОКПД2).
+    private const SAMPLE_CHARS = 200000;
 
     private const CONTRACT_TYPE = 'contract';
 
