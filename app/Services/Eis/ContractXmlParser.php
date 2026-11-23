@@ -197,7 +197,9 @@ class ContractXmlParser
     {
         $list = $xpath->query($query, $context);
 
-        return $list instanceof DOMNodeList ? $list->item(0) : null;
+        $node = $list instanceof DOMNodeList ? $list->item(0) : null;
+
+        return $node instanceof DOMNode ? $node : null;
     }
 
     private function first(DOMXPath $xpath, string $query, DOMNode $context): ?string

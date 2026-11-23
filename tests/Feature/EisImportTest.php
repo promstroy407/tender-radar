@@ -100,8 +100,8 @@ class EisImportTest extends TestCase
             'contract_1.xml' => $this->contract('1001', 'Выполнение работ по замене электропроводки', '2500000.50', '43.21.10.290', '1215000001'),
         ]);
 
-        $this->artisan('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
-        $this->artisan('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
+        $this->command('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
+        $this->command('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
 
         $this->assertSame(1, Contract::query()->count());
         $this->assertSame(1, Company::query()->count());
@@ -115,7 +115,7 @@ class EisImportTest extends TestCase
     {
         Http::fake();
 
-        $this->artisan('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
+        $this->command('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
 
         $log = $this->app->make(EisImportLog::class)->entries();
         $this->assertCount(1, $log);
@@ -129,7 +129,7 @@ class EisImportTest extends TestCase
         Region::factory()->create(['code' => '16']);
         Region::factory()->create(['code' => '21', 'is_enabled' => false]);
 
-        $this->artisan('eis:import', ['--days' => 2, '--until' => '2026-11-20'])
+        $this->command('eis:import', ['--days' => 2, '--until' => '2026-11-20'])
             ->expectsOutputToContain('Поставлено заданий: 4')
             ->assertSuccessful();
 
@@ -142,7 +142,7 @@ class EisImportTest extends TestCase
         sort($pushed);
         $this->assertSame(['12 2026-11-19', '12 2026-11-20', '16 2026-11-19', '16 2026-11-20'], $pushed);
 
-        $this->artisan('eis:import', ['--until' => '20.11.2026'])->assertFailed();
+        $this->command('eis:import', ['--until' => '20.11.2026'])->assertFailed();
     }
 
     public function test_settings_page_shows_log_and_starts_backfill(): void

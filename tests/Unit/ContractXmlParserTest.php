@@ -67,8 +67,9 @@ class ContractXmlParserTest extends TestCase
 
         $supplier = (new ContractXmlParser)->parse((string) $xml)?->supplier;
 
-        $this->assertSame('ИП Иванов Пётр Сергеевич', $supplier?->name);
-        $this->assertSame('121500000012', $supplier?->inn);
+        $this->assertNotNull($supplier);
+        $this->assertSame('ИП Иванов Пётр Сергеевич', $supplier->name);
+        $this->assertSame('121500000012', $supplier->inn);
     }
 
     /**
