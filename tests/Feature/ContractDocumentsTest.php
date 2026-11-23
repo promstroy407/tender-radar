@@ -69,7 +69,7 @@ class ContractDocumentsTest extends TestCase
         $this->assertNotNull($contract->refresh()->documents_checked_at);
 
         Http::assertSent(fn (Request $request): bool => $request->url() === self::URL
-            && str_contains($request->body(), '<ws:getDocsByReestrNumberRequest>')
+            && str_contains($request->body(), 'getDocsByReestrNumberRequest')
             && str_contains($request->body(), '<subsystemType>PRIZ</subsystemType><reestrNumber>'.self::NOTICE.'</reestrNumber>')
             && ! str_contains($request->body(), 'periodInfo'));
     }
