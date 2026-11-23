@@ -110,6 +110,22 @@ class EisTest extends TestCase
         $this->assertSame($report, $this->app->make(EisProbe::class)->lastReport());
     }
 
+    public function test_probe_uses_contract_type_when_schema_has_no_document_enum(): void
+    {
+        $this->settings()->put(SettingKey::EisToken, self::TOKEN);
+        Http::fake([
+            self::URL.'?xsd=getDocsIP-ws-api.xsd' => Http::response('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="documentType44" type="documentType"/><xs:simpleType name="commonSubsystemType"><xs:restriction base="xs:string"><xs:enumeration value="RGK"/></xs:restriction></xs:simpleType></xs:schema>'),
+            self::URL => Http::response($this->response('<dataInfo></dataInfo>')),
+        ]);
+
+        $report = $this->app->make(EisProbe::class)->run('12', '2026-11-14');
+
+        $this->assertTrue($report['ok']);
+        $this->assertSame('contract', $report['document_type']);
+        $this->assertSame(0, $report['archives']);
+        Http::assertSent(fn (Request $request): bool => str_contains($request->body(), '<documentType44>contract</documentType44>'));
+    }
+
     public function test_probe_reports_error_without_token(): void
     {
         Http::fake();

@@ -23,6 +23,8 @@ class EisProbe
 
     private const SAMPLE_CHARS = 6000;
 
+    private const CONTRACT_TYPE = 'contract';
+
     public function __construct(
         private readonly EisClient $client,
         private readonly FilesystemFactory $storage,
@@ -44,7 +46,9 @@ class EisProbe
             $this->client->assertConfigured();
             $enums = $this->schemaEnumerations();
             $report['schema'] = $enums;
-            $documentType ??= $this->guessContractType($enums['documentType44'] ?? []);
+            // В настоящей схеме documentType44 — свободная строка: допустимые коды берутся из
+            // справочника nsiDocumentTypes, перечисления нет. Тогда — код контракта «contract».
+            $documentType ??= $this->guessContractType($enums['documentType44'] ?? [self::CONTRACT_TYPE]);
             $report['document_type'] = $documentType;
 
             if ($documentType === null) {
