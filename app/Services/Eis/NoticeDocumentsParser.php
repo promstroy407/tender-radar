@@ -58,7 +58,8 @@ class NoticeDocumentsParser
     private function child(DOMXPath $xpath, DOMElement $node, string $name): ?string
     {
         $list = $xpath->query('./*[local-name()="'.$name.'"]', $node);
-        $value = $list instanceof DOMNodeList && $list->item(0) !== null ? trim($list->item(0)->textContent) : '';
+        $child = $list instanceof DOMNodeList ? $list->item(0) : null;
+        $value = $child instanceof DOMElement ? trim($child->textContent) : '';
 
         return $value === '' ? null : $value;
     }

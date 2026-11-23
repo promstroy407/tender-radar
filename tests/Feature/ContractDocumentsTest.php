@@ -63,8 +63,9 @@ class ContractDocumentsTest extends TestCase
         $documents = $contract->documents()->get();
         $this->assertSame(['Проект.pdf', 'Смета ЭОМ.xlsx'], $documents->pluck('name')->all());
         $smeta = $documents->firstWhere('name', 'Смета ЭОМ.xlsx');
-        $this->assertSame(15360, $smeta?->size_bytes);
-        $this->assertSame('Сметная документация', $smeta?->description);
+        $this->assertInstanceOf(ContractDocument::class, $smeta);
+        $this->assertSame(15360, $smeta->size_bytes);
+        $this->assertSame('Сметная документация', $smeta->description);
         $this->assertNotNull($contract->refresh()->documents_checked_at);
 
         Http::assertSent(fn (Request $request): bool => $request->url() === self::URL
@@ -137,9 +138,8 @@ class ContractDocumentsTest extends TestCase
             new NullLogger,
         );
 
-        $files = EstimateFile::query()->get();
-        $this->assertCount(1, $files);
-        $this->assertSame('Смета ЭОМ.csv', $files[0]->original_name);
+        $file = EstimateFile::query()->sole();
+        $this->assertSame('Смета ЭОМ.csv', $file->original_name);
         Queue::assertPushed(ParseEstimateFile::class, 1);
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('individualPerson_token', self::TOKEN));
         Http::assertSentCount(1);
