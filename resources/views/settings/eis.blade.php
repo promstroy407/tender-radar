@@ -31,7 +31,7 @@
 
     <div class="card">
         <h2>Проверка доступа</h2>
-        <p class="muted">Сервер запросит у ЕИС схему сервиса и реестр контрактов Марий Эл за вчера.</p>
+        <p class="muted">Сервер запросит у ЕИС схему сервиса и реестр контрактов Марий Эл за последний рабочий день.</p>
         <form method="post" action="{{ route('settings.eis.probe') }}">
             @csrf
             <button type="submit" class="secondary">Проверить доступ к ЕИС</button>

@@ -38,7 +38,7 @@ class EisProbe
         $report = [
             'started_at' => Carbon::now()->toDateTimeString(),
             'region' => $region,
-            'date' => $date ??= Carbon::yesterday()->toDateString(),
+            'date' => $date ??= $this->lastWorkingDay()->toDateString(),
             'subsystem' => $subsystem,
         ];
 
@@ -136,6 +136,17 @@ class EisProbe
         }
 
         return $result;
+    }
+
+    /** Вчера, а если вчера выходной — пятница: по выходным контрактов почти не публикуют. */
+    private function lastWorkingDay(): Carbon
+    {
+        $day = Carbon::yesterday();
+        while ($day->isWeekend()) {
+            $day->subDay();
+        }
+
+        return $day;
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Services\Eis\EisProbe;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -124,6 +125,22 @@ class EisTest extends TestCase
         $this->assertSame('contract', $report['document_type']);
         $this->assertSame(0, $report['archives']);
         Http::assertSent(fn (Request $request): bool => str_contains($request->body(), '<documentType44>contract</documentType44>'));
+    }
+
+    public function test_probe_after_weekend_takes_friday(): void
+    {
+        Carbon::setTestNow('2026-11-23 10:00:00'); // понедельник
+        $this->settings()->put(SettingKey::EisToken, self::TOKEN);
+        Http::fake([
+            self::URL.'?xsd=getDocsIP-ws-api.xsd' => Http::response('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"/>'),
+            self::URL => Http::response($this->response('<dataInfo></dataInfo>')),
+        ]);
+
+        $report = $this->app->make(EisProbe::class)->run();
+
+        $this->assertSame('2026-11-20', $report['date']);
+        Http::assertSent(fn (Request $request): bool => str_contains($request->body(), '<exactDate>2026-11-20</exactDate>'));
+        Carbon::setTestNow();
     }
 
     public function test_probe_reports_error_without_token(): void
