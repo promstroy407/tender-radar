@@ -45,7 +45,8 @@ return [
     // выдаётся на zakupki.gov.ru/pmd через Госуслуги; задаётся на странице «Настройки → ЕИС».
     'eis' => [
         'token' => env('EIS_TOKEN'),
-        'url_44' => env('EIS_URL_44', 'https://int44.zakupki.gov.ru/eis-integration/services/getDocsIP'),
+        // int44.zakupki.gov.ru перестал отвечать (23.11.2026); сам WSDL сервиса ссылается на int.
+        'url_44' => env('EIS_URL_44', 'https://int.zakupki.gov.ru/eis-integration/services/getDocsIP'),
     ],
 
     // Заявки с сайта es12.ru на POST /api/leads. Токен создаётся на сервере командой
