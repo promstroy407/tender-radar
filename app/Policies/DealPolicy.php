@@ -26,4 +26,9 @@ class DealPolicy
     {
         return $user->is_admin;
     }
+
+    public function delete(User $user, Deal $deal): bool
+    {
+        return $user->is_admin;
+    }
 }

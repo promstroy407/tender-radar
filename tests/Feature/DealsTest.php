@@ -168,6 +168,22 @@ class DealsTest extends TestCase
         $this->assertSame(100, $deal->refresh()->offer_amount_kopecks);
     }
 
+    public function test_admin_deletes_deal_and_tender_returns_to_feed(): void
+    {
+        $deal = Deal::factory()->tender()->status(DealStatus::Dismissed)->create();
+        Offer::factory()->for($deal)->create(['contract_id' => $deal->contract_id]);
+
+        $this->actingAs(User::factory()->create())->delete('/deals/'.$deal->id)->assertForbidden();
+        $this->assertSame(1, Deal::query()->count());
+
+        $this->actingAs($this->admin())->delete('/deals/'.$deal->id)
+            ->assertRedirect('/deals?status=dismissed');
+
+        $this->assertSame(0, Deal::query()->count());
+        $this->assertSame(0, Offer::query()->count());
+        $this->assertSame(1, Contract::query()->count());
+    }
+
     public function test_tender_page_links_to_its_deal(): void
     {
         $deal = Deal::factory()->tender()->status(DealStatus::Negotiation)->create();

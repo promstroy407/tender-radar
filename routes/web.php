@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('deals/{deal}', [DealController::class, 'show'])->can('view', 'deal')->name('deals.show');
     Route::put('deals/{deal}/status', [DealController::class, 'updateStatus'])->name('deals.status');
     Route::put('deals/{deal}', [DealController::class, 'update'])->name('deals.update');
+    Route::delete('deals/{deal}', [DealController::class, 'destroy'])->can('delete', 'deal')->name('deals.destroy');
     // Старый адрес экрана «В работе» — на случай закладок.
     Route::redirect('work', 'deals')->middleware('can:viewAny,'.Deal::class);
 

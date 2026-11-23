@@ -89,4 +89,11 @@
         @error('note') <p class="error">{{ $message }}</p> @enderror
         <button type="submit">Сохранить</button>
     </form>
+
+    <form method="post" action="{{ route('deals.destroy', $deal) }}" class="card" onsubmit="return confirm('Удалить сделку безвозвратно?')">
+        @csrf
+        @method('delete')
+        <p class="muted">Для тестовых и спам-заявок. Удаление безвозвратное.</p>
+        <button type="submit" class="secondary">Удалить сделку</button>
+    </form>
 @endsection

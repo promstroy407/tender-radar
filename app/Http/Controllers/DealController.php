@@ -65,4 +65,12 @@ class DealController extends Controller
 
         return redirect()->route('deals.show', $deal)->with('status', 'Сохранено.');
     }
+
+    public function destroy(Deal $deal): RedirectResponse
+    {
+        $status = $deal->status;
+        $this->deals->delete($deal);
+
+        return redirect()->route('deals', ['status' => $status->value])->with('status', 'Сделка удалена.');
+    }
 }
