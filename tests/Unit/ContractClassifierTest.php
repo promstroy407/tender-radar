@@ -61,6 +61,7 @@ class ContractClassifierTest extends TestCase
     {
         $contract = new ParsedContract(
             registryNumber: '1',
+            notificationNumber: null,
             subject: $subject,
             customerName: 'Заказчик',
             customerInn: null,

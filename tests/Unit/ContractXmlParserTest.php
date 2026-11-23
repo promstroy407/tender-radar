@@ -16,6 +16,7 @@ class ContractXmlParserTest extends TestCase
 
         $this->assertNotNull($contract);
         $this->assertSame('2121504059826000350', $contract->registryNumber);
+        $this->assertSame('0108500000426005719', $contract->notificationNumber);
         $this->assertSame('Выполнение работ по замене электропроводки', $contract->subject);
         $this->assertSame('ГБОУ «ШКОЛА № 1» (ВЫМЫШЛЕННЫЙ ЗАКАЗЧИК)', $contract->customerName);
         $this->assertSame('1200000001', $contract->customerInn);

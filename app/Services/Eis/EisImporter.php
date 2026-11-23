@@ -8,11 +8,12 @@ use App\Data\Eis\ContractClassification;
 use App\Data\Eis\EisImportResult;
 use App\Data\Eis\ParsedContract;
 use App\Enums\ProcurementLaw;
+use App\Jobs\FetchContractDocuments;
 use App\Models\Company;
 use App\Models\Contract;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Carbon;
-use ZipArchive;
 
 /**
  * Сбор контрактов 44-ФЗ из реестра контрактов ЕИС: регион заказчика и день публикации →
@@ -29,7 +30,9 @@ class EisImporter
         private readonly EisClient $client,
         private readonly ContractXmlParser $parser,
         private readonly ContractClassifier $classifier,
+        private readonly EisArchiveReader $archives,
         private readonly ConnectionInterface $db,
+        private readonly Dispatcher $bus,
     ) {}
 
     public function importDay(string $regionCode, Carbon $date): EisImportResult
@@ -40,7 +43,7 @@ class EisImporter
         $files = $parsed = $matched = $saved = 0;
 
         foreach ($urls as $url) {
-            foreach ($this->xmlFiles($this->client->downloadWhenReady($url)) as $xml) {
+            foreach ($this->archives->xmlFiles($this->client->downloadWhenReady($url)) as $xml) {
                 $files++;
                 $contract = $this->parser->parse($xml);
                 if ($contract === null) {
@@ -71,7 +74,7 @@ class EisImporter
             return;
         }
 
-        $this->db->transaction(function () use ($regionCode, $contract, $classification, $supplier): void {
+        $saved = $this->db->transaction(function () use ($regionCode, $contract, $classification, $supplier): Contract {
             $company = Company::query()->firstOrNew(['inn' => $supplier->inn]);
             $company->fill(array_filter([
                 'kpp' => $supplier->kpp,
@@ -82,9 +85,10 @@ class EisImporter
                 'city' => $company->city ?? $supplier->city,
             ], fn (?string $value): bool => $value !== null))->save();
 
-            Contract::query()->updateOrCreate(
+            return Contract::query()->updateOrCreate(
                 ['law' => ProcurementLaw::Fz44, 'registry_number' => $contract->registryNumber],
                 [
+                    'notification_number' => $contract->notificationNumber,
                     'kind' => $classification->kind,
                     'region_code' => $regionCode,
                     'subject' => $contract->subject,
@@ -98,6 +102,11 @@ class EisImporter
                 ],
             );
         });
+
+        // Документация закупки ищется один раз, в фоне — после записи контракта.
+        if ($saved->documents_checked_at === null && $saved->notification_number !== null) {
+            $this->bus->dispatch(new FetchContractDocuments($saved->id));
+        }
     }
 
     /**
@@ -112,34 +121,5 @@ class EisImporter
             ->whereDoesntHave('deal')
             ->whereDoesntHave('estimate')
             ->delete();
-    }
-
-    /**
-     * XML-файлы из zip-архива ЕИС.
-     *
-     * @return iterable<string>
-     */
-    private function xmlFiles(string $zipBytes): iterable
-    {
-        $path = tempnam(sys_get_temp_dir(), 'eis');
-        file_put_contents($path, $zipBytes);
-
-        try {
-            $zip = new ZipArchive;
-            if ($zip->open($path) !== true) {
-                throw new EisException('ЕИС: архив повреждён или это не zip.');
-            }
-
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                $name = (string) $zip->getNameIndex($i);
-                if (str_ends_with(strtolower($name), '.xml')) {
-                    yield (string) $zip->getFromIndex($i);
-                }
-            }
-
-            $zip->close();
-        } finally {
-            @unlink($path);
-        }
     }
 }

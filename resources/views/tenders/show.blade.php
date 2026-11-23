@@ -69,6 +69,42 @@
 
     <section class="card">
         <div class="between">
+            <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Документация закупки</h3>
+            @if ($contract->notification_number)
+                <a href="https://zakupki.gov.ru/epz/order/extendedsearch/results.html?searchString={{ $contract->notification_number }}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600">В ЕИС →</a>
+            @endif
+        </div>
+        @if ($contract->documents->isNotEmpty())
+            <ul class="docs">
+                @foreach ($contract->documents as $document)
+                    <li>
+                        <a href="{{ $document->url }}" target="_blank" rel="noopener">{{ $document->name }}</a>
+                        @if ($document->size_bytes)<span class="muted"> · {{ number_format($document->size_bytes / 1048576, 1, ',', ' ') }} МБ</span>@endif
+                        @if ($document->description)<div class="muted" style="font-size:12px">{{ $document->description }}</div>@endif
+                    </li>
+                @endforeach
+            </ul>
+            <form method="post" action="{{ route('tenders.documents.estimate', $contract) }}">
+                @csrf
+                <button type="submit">Загрузить в смету и посчитать</button>
+            </form>
+        @elseif ($contract->documents_checked_at)
+            <p class="muted">В извещении файлов не найдено ({{ $contract->documents_checked_at->translatedFormat('j F, H:i') }}).</p>
+        @elseif ($contract->notification_number)
+            <p class="muted">Документация ещё не загружена из ЕИС.</p>
+        @else
+            <p class="muted">У контракта нет номера извещения — документацию найти нельзя.</p>
+        @endif
+        @if ($contract->notification_number)
+            <form method="post" action="{{ route('tenders.documents.fetch', $contract) }}">
+                @csrf
+                <button type="submit" class="secondary">{{ $contract->documents_checked_at ? 'Обновить список' : 'Найти документацию' }}</button>
+            </form>
+        @endif
+    </section>
+
+    <section class="card">
+        <div class="between">
             <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Смета — для себя</h3>
             <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">{{ $estimateSummary && $estimateSummary->hasData() ? 'Открыть' : 'Посчитать' }} →</a>
         </div>

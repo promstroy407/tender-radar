@@ -48,6 +48,8 @@ class ContractXmlParser
 
         return new ParsedContract(
             registryNumber: $registryNumber,
+            // Номер извещения о закупке: по нему ищется документация (проект, смета, ТЗ).
+            notificationNumber: $this->first($xpath, './*[local-name()="foundation"]//*[local-name()="notificationNumber"]', $contract),
             subject: $this->text($xpath, 'contractSubject', $contract) ?? '',
             customerName: $this->text($xpath, 'customer/fullName', $contract)
                 ?? $this->text($xpath, 'customer/shortName', $contract) ?? '',

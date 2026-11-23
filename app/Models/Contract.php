@@ -11,9 +11,11 @@ use Database\Factories\ContractFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -23,6 +25,8 @@ use Illuminate\Support\Collection;
  *
  * @property int $id
  * @property string $registry_number
+ * @property string|null $notification_number
+ * @property Carbon|null $documents_checked_at
  * @property ProcurementLaw $law
  * @property ContractKind $kind
  * @property string $region_code
@@ -40,9 +44,10 @@ use Illuminate\Support\Collection;
  * @property-read Offer|null $offer
  * @property-read Deal|null $deal
  * @property-read Estimate|null $estimate
+ * @property-read EloquentCollection<int, ContractDocument> $documents
  */
 #[Fillable([
-    'registry_number', 'law', 'kind', 'region_code', 'subject', 'customer_name', 'customer_inn',
+    'registry_number', 'notification_number', 'documents_checked_at', 'law', 'kind', 'region_code', 'subject', 'customer_name', 'customer_inn',
     'amount_kopecks', 'signed_at', 'ends_at', 'sections', 'requires_smp_subcontract', 'company_id',
 ])]
 class Contract extends Model
@@ -80,6 +85,16 @@ class Contract extends Model
     public function offer(): HasOne
     {
         return $this->hasOne(Offer::class);
+    }
+
+    /**
+     * Файлы документации закупки (из извещения в ЕИС).
+     *
+     * @return HasMany<ContractDocument, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ContractDocument::class)->orderBy('name');
     }
 
     /**
@@ -123,6 +138,7 @@ class Contract extends Model
             'amount_kopecks' => 'integer',
             'signed_at' => 'date',
             'ends_at' => 'date',
+            'documents_checked_at' => 'datetime',
             'sections' => AsEnumCollection::of(WorkSection::class),
             'requires_smp_subcontract' => 'boolean',
         ];

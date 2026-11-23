@@ -63,6 +63,7 @@
         .status-grid button[aria-pressed=true] { background:var(--ink); color:#fff; border-color:var(--ink); }
         .scroll-x { display:flex; gap:8px; overflow-x:auto; margin:0 -20px; padding:0 20px 2px; scrollbar-width:none; }
         .scroll-x .stat { flex:none; min-width:96px; padding:0 8px; }
+        ul.docs { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; font-size:14px; word-break:break-word; }
         table.report { width:100%; border-collapse:collapse; font-size:13px; }
         table.report th { text-align:left; font-weight:600; color:var(--muted); font-size:12px; padding:6px 4px; border-bottom:1px solid var(--line); }
         table.report td { padding:8px 4px; border-bottom:1px solid var(--chip); vertical-align:top; }

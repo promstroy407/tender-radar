@@ -48,6 +48,22 @@ class EisClient
         return $this->archiveUrls($this->post($xml));
     }
 
+    /**
+     * Документы по реестровому номеру: извещение о закупке (PRIZ) со списком файлов
+     * документации. Возвращает ссылки на архивы.
+     *
+     * @return list<string>
+     */
+    public function docsByReestrNumber(string $subsystemType, string $reestrNumber): array
+    {
+        $xml = $this->envelope('getDocsByReestrNumberRequest', [
+            'subsystemType' => $subsystemType,
+            'reestrNumber' => $reestrNumber,
+        ], null);
+
+        return $this->archiveUrls($this->post($xml));
+    }
+
     /** Токен задан? Иначе понятная ошибка до любых запросов. */
     public function assertConfigured(): void
     {
@@ -111,7 +127,7 @@ class EisClient
     /**
      * @param  array<string, string>  $selection  порядок полей важен: так требует схема
      */
-    public function envelope(string $method, array $selection, string $exactDate): string
+    public function envelope(string $method, array $selection, ?string $exactDate): string
     {
         $doc = new DOMDocument('1.0', 'UTF-8');
         $envelope = $doc->createElementNS(self::SOAP_NS, 'soapenv:Envelope');
@@ -139,9 +155,11 @@ class EisClient
             $element->appendChild($doc->createTextNode($value));
             $params->appendChild($element);
         }
-        $period = $doc->createElement('periodInfo');
-        $period->appendChild($doc->createElement('exactDate', $exactDate));
-        $params->appendChild($period);
+        if ($exactDate !== null) {
+            $period = $doc->createElement('periodInfo');
+            $period->appendChild($doc->createElement('exactDate', $exactDate));
+            $params->appendChild($period);
+        }
         $request->appendChild($params);
 
         return (string) $doc->saveXML();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ContractDocumentsController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\EisSettingsController;
 use App\Http\Controllers\EstimateController;
@@ -48,6 +49,8 @@ Route::middleware('auth')->group(function (): void {
     // Быстрая смета тендера — для себя: работа по нашему прайсу, материалы из сметы заказчика.
     Route::middleware('can:manage,'.Estimate::class)->group(function (): void {
         Route::get('tenders/{contract}/estimate', [EstimateController::class, 'show'])->name('estimates.show');
+        Route::post('tenders/{contract}/documents', [ContractDocumentsController::class, 'fetch'])->name('tenders.documents.fetch');
+        Route::post('tenders/{contract}/documents/estimate', [ContractDocumentsController::class, 'toEstimate'])->name('tenders.documents.estimate');
         Route::post('tenders/{contract}/estimate/files', [EstimateController::class, 'upload'])->name('estimates.upload');
         Route::get('tenders/{contract}/estimate/export', [EstimateController::class, 'export'])->name('estimates.export');
         Route::post('estimate-files/{file}/reparse', [EstimateController::class, 'reparse'])->name('estimates.files.reparse');

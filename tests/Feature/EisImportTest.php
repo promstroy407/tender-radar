@@ -75,6 +75,10 @@ class EisImportTest extends TestCase
         $this->assertSame('2026-11-20', $electric->signed_at->toDateString());
         $this->assertEquals([WorkSection::Eom], $electric->sections->all());
         $this->assertSame('ГБОУ «ШКОЛА № 1» (ВЫМЫШЛЕННЫЙ ЗАКАЗЧИК)', $electric->customer_name);
+        $this->assertSame('0108500000426005719', $electric->notification_number);
+        // Поиск документации запущен сразу после записи (в тестах очередь синхронная).
+        $this->assertNotNull($electric->documents_checked_at);
+        Http::assertSent(fn (Request $request): bool => str_contains($request->body(), '<reestrNumber>0108500000426005719</reestrNumber>'));
 
         $winner = $electric->company;
         $this->assertSame('1215000001', $winner->inn);

@@ -16,6 +16,7 @@ final readonly class ParsedContract
      */
     public function __construct(
         public string $registryNumber,
+        public ?string $notificationNumber,
         public string $subject,
         public string $customerName,
         public ?string $customerInn,

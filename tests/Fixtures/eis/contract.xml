@@ -4,6 +4,14 @@
         <id>100</id>
         <publishDate>2026-11-20T07:43:57.256+03:00</publishDate>
         <versionNumber>0</versionNumber>
+        <foundation>
+            <fcsOrder>
+                <order>
+                    <notificationNumber>0108500000426005719</notificationNumber>
+                    <lotNumber>1</lotNumber>
+                </order>
+            </fcsOrder>
+        </foundation>
         <customer>
             <regNum>03082000066</regNum>
             <fullName>ГБОУ «ШКОЛА № 1» (ВЫМЫШЛЕННЫЙ ЗАКАЗЧИК)</fullName>
