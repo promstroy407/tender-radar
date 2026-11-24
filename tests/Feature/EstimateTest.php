@@ -99,7 +99,7 @@ class EstimateTest extends TestCase
                 ['№', 'Наименование', 'Ед. изм.', 'Количество', 'Материалы, руб.'],
                 [1, 'Извещатель пожарный дымовой ИП 212-141', 'шт', 20, 15000],
                 [2, 'Прокладка кабеля КПСЭнг(А)-FRLS по стенам', '100 м', 1.5, 9000.5],
-                [3, 'Устройство бетонной подготовки', 'м3', 4, 50000],
+                [3, 'Устройство бетонной подготовки', 'шт', 4, 50000],
                 [4, 'Прибор приёмно-контрольный Сигнал-20П', 'шт', 1, null],
             ])]])
             ->assertRedirect('/tenders/'.$contract->id.'/estimate');
@@ -124,7 +124,21 @@ class EstimateTest extends TestCase
             ->assertSee('11,5 %')
             ->assertSee('Не посчитано позиций: 1')
             // Что не посчитано — видно списком с причиной.
-            ->assertSeeInOrder(['Не посчитано (1)', 'Устройство бетонной подготовки', 'нет в прайсе']);
+            ->assertSeeInOrder(['Не посчитано (1)', 'Устройство бетонной подготовки', '+ в прайс']);
+
+        // «+ в прайс»: форма заполнена по строке, после сохранения строка посчитана.
+        $this->actingAs($this->admin())->get('/prices/new?'.http_build_query(['name' => 'Устройство бетонной подготовки', 'unit' => 'шт', 'back' => $contract->id]))
+            ->assertOk()
+            ->assertSee('value="Устройство бетонной подготовки"', false)
+            ->assertSee('устрой бетонн подгот');
+
+        $this->actingAs($this->admin())->post('/prices', [
+            'section' => 'electric', 'name' => 'Бетонная подготовка', 'unit' => 'шт', 'price_rubles' => '500',
+            'keywords' => 'бетонн подгот', 'is_active' => '1', 'back' => $contract->id,
+        ])->assertRedirect('/tenders/'.$contract->id.'/estimate#unpriced');
+
+        $this->assertNotNull(EstimateLine::query()->where('name', 'like', 'Устройство бетонной%')->value('price_item_id'));
+        $this->actingAs(User::factory()->create())->get('/prices/new?name=x')->assertForbidden();
 
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id)
             ->assertOk()

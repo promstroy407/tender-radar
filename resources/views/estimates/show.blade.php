@@ -71,14 +71,21 @@
     @endif
 
     @if ($summary && $summary->unpriced !== [])
-        <section class="card">
+        <section class="card" id="unpriced">
             <h3 class="section-title">Не посчитано ({{ count($summary->unpriced) }})</h3>
-            <p class="muted" style="font-size:12px">Этих работ нет в нашем прайсе или у них нет цены — в «Работы» они не вошли. Добавить цену: «Прайс работ»; сопоставить вручную — в «Все позиции» ниже.</p>
+            <p class="muted" style="font-size:12px">Этих работ нет в нашем прайсе или у них нет цены — в «Работы» они не вошли. Нажмите «+ в прайс»: форма заполнится по строке, впишите цену — смета пересчитается. Мусор из PDF («экспликация», номера листов) пропускайте.</p>
             <ul class="work-list">
                 @foreach (array_slice($summary->unpriced, 0, 150) as $row)
-                    <li>
+                    <li class="unpriced">
                         <span class="work-name">{{ $row['name'] }}</span>
-                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}</span><span style="color:var(--hotink)">{{ $row['reason'] }}</span></span>
+                        <span class="between muted">
+                            <span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}</span>
+                            @if ($row['price_item'])
+                                <a href="{{ route('prices') }}#item-{{ $row['price_item']->id }}" style="font-weight:600">нет цены: «{{ \Illuminate\Support\Str::limit($row['price_item']->name, 30) }}» →</a>
+                            @else
+                                <a href="{{ route('prices.create', ['name' => $row['name'], 'unit' => $row['unit'], 'back' => $contract->id]) }}" style="font-weight:600">+ в прайс</a>
+                            @endif
+                        </span>
                     </li>
                 @endforeach
             </ul>

@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function (): void {
         Route::put('estimate-lines/{line}', [EstimateController::class, 'updateLine'])->name('estimates.lines.update');
 
         Route::get('prices', [PriceController::class, 'index'])->name('prices');
+        Route::get('prices/new', [PriceController::class, 'create'])->name('prices.create');
         Route::post('prices', [PriceController::class, 'store'])->name('prices.store');
         Route::put('prices/{item}', [PriceController::class, 'update'])->name('prices.update');
     });

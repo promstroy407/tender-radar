@@ -8,6 +8,7 @@ use App\Enums\LineMatch;
 use App\Models\Estimate;
 use App\Models\EstimateFile;
 use App\Models\EstimateLine;
+use App\Models\PriceItem;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -48,10 +49,10 @@ class EstimateCalculator
 
             if ($line->priceItem === null) {
                 $unmatched++;
-                $unpriced[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'reason' => 'нет в прайсе'];
+                $this->addUnpriced($unpriced, $line, null);
             } elseif ($lineWork === null) {
                 $noPrice++;
-                $unpriced[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'reason' => 'нет цены: «'.$line->priceItem->name.'»'];
+                $this->addUnpriced($unpriced, $line, $line->priceItem);
             } else {
                 $priced++;
                 $work += $lineWork;
@@ -86,8 +87,21 @@ class EstimateCalculator
             linesSkipped: $skipped,
             sections: $this->sortByKopecks(array_values($bySection)),
             topLines: array_slice($this->sortByKopecks($top), 0, self::TOP_LINES),
-            unpriced: $unpriced,
+            unpriced: array_values($unpriced),
         );
+    }
+
+    /**
+     * Одинаковые строки (имя + единица) складываются: в проекте одна позиция
+     * часто стоит на нескольких листах.
+     *
+     * @param  array<string, array{name: string, quantity_milli: int, unit: string|null, price_item: PriceItem|null}>  $unpriced
+     */
+    private function addUnpriced(array &$unpriced, EstimateLine $line, ?PriceItem $item): void
+    {
+        $key = mb_strtolower(trim($line->name)).'|'.mb_strtolower((string) $line->unit);
+        $unpriced[$key] ??= ['name' => $line->name, 'quantity_milli' => 0, 'unit' => $line->unit, 'price_item' => $item];
+        $unpriced[$key]['quantity_milli'] += $line->quantity_milli;
     }
 
     /**

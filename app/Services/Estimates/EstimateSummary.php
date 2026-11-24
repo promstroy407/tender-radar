@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Estimates;
 
 use App\Enums\PriceSection;
+use App\Models\PriceItem;
 
 /**
  * Итоги быстрой сметы: только работы (материалы считаются отдельно).
@@ -17,7 +18,7 @@ final readonly class EstimateSummary
     /**
      * @param  list<array{section: PriceSection, kopecks: int, lines: int}>  $sections  работы по разделам, крупные сверху
      * @param  list<array{name: string, quantity_milli: int, unit: string|null, kopecks: int}>  $topLines  самые дорогие работы
-     * @param  list<array{name: string, quantity_milli: int, unit: string|null, reason: string}>  $unpriced  что не посчитано и почему
+     * @param  list<array{name: string, quantity_milli: int, unit: string|null, price_item: PriceItem|null}>  $unpriced  что не посчитано; price_item — есть в прайсе, но без цены
      */
     public function __construct(
         public int $normativeKopecks,

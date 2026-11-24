@@ -65,6 +65,7 @@
         .scroll-x .stat { flex:none; min-width:96px; padding:0 8px; }
         ul.work-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
         ul.work-list li { display:flex; flex-direction:column; gap:2px; border-bottom:1px solid var(--chip); padding-bottom:8px; }
+        ul.work-list li.unpriced { background:var(--hotbg); border-radius:10px; padding:8px 10px; border-bottom:0; }
         .work-name { font-size:14px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
         button.small, .button.small { min-height:34px; padding:0 10px; font-size:12px; }
         details.card > summary { cursor:pointer; font-weight:600; min-height:28px; }

@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\PriceSection;
+use App\Http\Requests\PriceDraftRequest;
 use App\Http\Requests\PriceItemRequest;
 use App\Models\PriceItem;
 use App\Models\Region;
+use App\Services\Estimates\EstimateService;
+use App\Services\Estimates\PriceDraftBuilder;
 use App\Services\Estimates\PriceResolver;
 use App\Services\MoneyFormatter;
 use Illuminate\Contracts\View\View;
@@ -21,7 +24,22 @@ class PriceController extends Controller
     public function __construct(
         private readonly PriceResolver $prices,
         private readonly MoneyFormatter $money,
+        private readonly PriceDraftBuilder $drafts,
+        private readonly EstimateService $estimates,
     ) {}
+
+    /** Новая позиция по непосчитанной строке сметы: форма заполнена заранее. */
+    public function create(PriceDraftRequest $request): View
+    {
+        $back = $request->validated('back');
+
+        return view('prices.create', [
+            'draft' => $this->drafts->build((string) $request->validated('name'), $request->validated('unit')),
+            'back' => is_numeric($back) ? (int) $back : null,
+            'sections' => PriceSection::cases(),
+            'units' => PriceItemRequest::UNITS,
+        ]);
+    }
 
     public function index(): View
     {
@@ -48,7 +66,16 @@ class PriceController extends Controller
 
     public function store(PriceItemRequest $request): RedirectResponse
     {
-        PriceItem::query()->create($request->toAttributes());
+        $item = PriceItem::query()->create($request->toAttributes());
+
+        // Добавили из сметы тендера — пересопоставляем её и возвращаемся к списку «Не посчитано».
+        $contract = $request->backContract();
+        if ($contract !== null) {
+            $matched = $contract->estimate !== null ? $this->estimates->rematchUnmatched($contract->estimate) : 0;
+
+            return redirect()->to(route('estimates.show', $contract).'#unpriced')
+                ->with('status', 'Добавлено в прайс: «'.$item->name.'». Посчитано позиций: '.$matched.'.');
+        }
 
         return redirect()->route('prices')->with('status', 'Позиция добавлена.');
     }

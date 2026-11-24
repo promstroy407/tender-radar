@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\PriceSection;
+use App\Models\Contract;
 use App\Models\PriceItem;
 use App\Services\Estimates\NumberParser;
 use Illuminate\Foundation\Http\FormRequest;
@@ -48,6 +49,8 @@ class PriceItemRequest extends FormRequest
             'gesn_code' => ['nullable', 'regex:/^\d{2}-\d{2}-\d{3}-\d{2}$/'],
             'keywords' => ['required', 'string', 'max:2000'],
             'is_active' => ['sometimes', 'boolean'],
+            // Добавляют из сметы тендера — после сохранения вернуться к ней.
+            'back' => ['nullable', 'integer', 'exists:contracts,id'],
         ];
     }
 
@@ -61,6 +64,13 @@ class PriceItemRequest extends FormRequest
             'name.unique' => 'Такая позиция с этой единицей уже есть.',
             'gesn_code.regex' => 'Шифр нормы вида 08-02-147-01.',
         ];
+    }
+
+    public function backContract(): ?Contract
+    {
+        $back = $this->validated('back');
+
+        return is_numeric($back) ? Contract::query()->with('estimate')->find((int) $back) : null;
     }
 
     /**

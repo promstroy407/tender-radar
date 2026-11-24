@@ -33,6 +33,7 @@ class EstimateService
         private readonly FilesystemFactory $storage,
         private readonly Dispatcher $bus,
         private readonly DocumentReader $reader,
+        private readonly PriceMatcher $matcher,
     ) {}
 
     /** Смета тендера; автор — тот, кто начал, или никто, если её начал сервер сам. */
@@ -98,6 +99,26 @@ class EstimateService
     {
         $this->storage->disk('local')->delete($file->path);
         $file->delete();
+    }
+
+    /**
+     * Сопоставить заново строки сметы без позиции прайса (после добавления в прайс).
+     * Ручные решения («не считать», выбранная вручную работа) не трогаем.
+     */
+    public function rematchUnmatched(Estimate $estimate): int
+    {
+        $items = PriceItem::query()->where('is_active', true)->get();
+        $matched = 0;
+
+        foreach ($estimate->lines()->whereNull('price_item_id')->where('match', LineMatch::Auto)->get() as $line) {
+            $item = $this->matcher->match($line->name, $line->unit, $items);
+            if ($item !== null) {
+                $line->forceFill(['price_item_id' => $item->id])->save();
+                $matched++;
+            }
+        }
+
+        return $matched;
     }
 
     /** Ручное сопоставление: позиция прайса, «не считать» или вернуть автоматическое. */
