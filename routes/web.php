@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function (): void {
         Route::post('tenders/{contract}/estimate/files', [EstimateController::class, 'upload'])->name('estimates.upload');
         Route::get('tenders/{contract}/estimate/export', [EstimateController::class, 'export'])->name('estimates.export');
         Route::post('estimate-files/{file}/reparse', [EstimateController::class, 'reparse'])->name('estimates.files.reparse');
+        Route::get('estimate-files/{file}/text', [EstimateController::class, 'text'])->name('estimates.files.text');
         Route::delete('estimate-files/{file}', [EstimateController::class, 'destroyFile'])->name('estimates.files.destroy');
         Route::put('estimate-lines/{line}', [EstimateController::class, 'updateLine'])->name('estimates.lines.update');
 

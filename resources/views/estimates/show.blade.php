@@ -88,6 +88,9 @@
                 <div class="between" style="gap:6px">
                     <span class="muted" style="word-break:break-word">{{ \Illuminate\Support\Str::limit($file->original_name, 50) }}</span>
                     <div class="row" style="flex:none">
+                        @if ($file->path !== '' && $file->extension() === 'pdf')
+                            <a class="button secondary" href="{{ route('estimates.files.text', $file) }}" target="_blank" style="min-height:36px;padding:0 10px;font-size:12px">Текст</a>
+                        @endif
                         @if ($file->path !== '')
                             <form method="post" action="{{ route('estimates.files.reparse', $file) }}">
                                 @csrf

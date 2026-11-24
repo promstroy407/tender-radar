@@ -55,6 +55,8 @@ class ContractDocumentsTest extends TestCase
             ['Смета ЭОМ.xlsx', 'https://zakupki.example.test/file?uid=1', '15360', 'Сметная документация'],
             ['Проект.pdf', 'https://zakupki.example.test/file?uid=2', '', null],
             ['Битая ссылка.pdf', 'javascript:alert(1)', '10', null],
+            // Тот же файл из изменения извещения — другая ссылка, то же имя и размер.
+            ['Смета ЭОМ.xlsx', 'https://zakupki.example.test/file?uid=3', '15360', 'Сметная документация'],
         ]));
 
         $count = $this->app->make(ContractDocumentsService::class)->fetch($contract);
@@ -140,6 +142,20 @@ class ContractDocumentsTest extends TestCase
 
         $file = EstimateFile::query()->sole();
         $this->assertSame('Смета ЭОМ.csv', $file->original_name);
+
+        // Повторное нажатие не добавляет тот же файл ещё раз.
+        (new LoadDocumentsIntoEstimate($contract->id, $admin->id))->handle(
+            $this->app->make(ContractDocumentsService::class),
+            new NullLogger,
+        );
+        $this->assertSame(1, EstimateFile::query()->count());
+
+        // Текст файла — так, как его видит разбор (для нечитаемых смет).
+        $this->actingAs($admin)->get('/estimate-files/'.$file->id.'/text')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+            ->assertSee('Кабель ВВГнг 3х2,5 | м | 120');
+        $this->actingAs(User::factory()->create())->get('/estimate-files/'.$file->id.'/text')->assertForbidden();
         Queue::assertPushed(ParseEstimateFile::class, 1);
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('individualPerson_token', self::TOKEN));
         Http::assertSentCount(1);

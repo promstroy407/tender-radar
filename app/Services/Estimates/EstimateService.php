@@ -72,6 +72,27 @@ class EstimateService
         $this->bus->dispatch(new ParseEstimateFile($file));
     }
 
+    /**
+     * Содержимое файла строками, колонки через « | », как его видит разбор.
+     */
+    public function text(EstimateFile $file): string
+    {
+        try {
+            $tables = $this->reader->read($this->storage->disk('local')->path($file->path), $file->extension());
+        } catch (EstimateReadException $e) {
+            return $e->getMessage();
+        }
+
+        $out = [];
+        foreach ($tables as $rows) {
+            foreach ($rows as $row) {
+                $out[] = implode(' | ', array_map(fn (string|int|float|null $cell): string => (string) $cell, $row));
+            }
+        }
+
+        return implode("\n", $out);
+    }
+
     public function deleteFile(EstimateFile $file): void
     {
         $this->storage->disk('local')->delete($file->path);

@@ -22,6 +22,7 @@ use App\Services\MoneyFormatter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -96,6 +97,12 @@ class EstimateController extends Controller
         $this->estimates->reparse($file);
 
         return redirect()->route('estimates.show', $file->estimate->contract_id)->with('status', 'Файл читается заново.');
+    }
+
+    /** Текст PDF так, как его видит разбор: чтобы понять, почему смета не прочиталась. */
+    public function text(EstimateFile $file): Response
+    {
+        return new Response($this->estimates->text($file), 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
     public function destroyFile(EstimateFile $file): RedirectResponse

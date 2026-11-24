@@ -42,7 +42,9 @@ class ContractDocumentsService
             foreach ($this->client->docsByReestrNumber(self::NOTICES, $contract->notification_number) as $url) {
                 foreach ($this->archives->xmlFiles($this->client->downloadWhenReady($url)) as $xml) {
                     foreach ($this->parser->parse($xml) as $document) {
-                        $documents[$document->url] = $document;
+                        // В извещении и его изменениях один и тот же файл лежит под разными
+                        // ссылками: оставляем один экземпляр (имя + размер), последний.
+                        $documents[mb_strtolower($document->name).'|'.($document->sizeBytes ?? '')] = $document;
                     }
                 }
             }
@@ -70,9 +72,15 @@ class ContractDocumentsService
         $estimate = $this->estimates->forContract($contract, $user);
         $loaded = 0;
         $skipped = [];
+        $present = array_values(array_map(strval(...), $estimate->files()->pluck('original_name')->all()));
 
         /** @var ContractDocument $document */
         foreach ($contract->documents()->get() as $document) {
+            // Повторное нажатие не добавляет те же файлы (архив лежит как «архив → файл»).
+            if ($this->alreadyLoaded($document->name, $present)) {
+                continue;
+            }
+
             if ($document->size_bytes !== null && $document->size_bytes > self::MAX_FILE_BYTES) {
                 $skipped[] = $document->name.' — больше 64 МБ';
 
@@ -98,5 +106,19 @@ class ContractDocumentsService
         }
 
         return new DocumentsToEstimateResult($loaded, $skipped);
+    }
+
+    /**
+     * @param  list<string>  $present  имена файлов, уже загруженных в смету
+     */
+    private function alreadyLoaded(string $name, array $present): bool
+    {
+        foreach ($present as $existing) {
+            if ($existing === $name || str_starts_with($existing, $name.' → ')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
