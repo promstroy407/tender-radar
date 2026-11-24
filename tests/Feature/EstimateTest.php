@@ -221,7 +221,8 @@ class EstimateTest extends TestCase
     {
         // Скан сметы заказчика: текста нет — страницы распознаются Tesseract.
         Process::fake([
-            '*pdftotext*' => Process::result(''),
+            // Только разрывы страниц и номер листа — текстового слоя нет.
+            '*pdftotext*' => Process::result("\f Лист 1\f\f"),
             '*pdfinfo*' => Process::result("Title: смета\nPages:          2\n"),
             '*pdftoppm*' => Process::result(''),
             '*tesseract*' => Process::sequence()
