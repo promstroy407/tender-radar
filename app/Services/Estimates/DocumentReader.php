@@ -11,7 +11,7 @@ use Throwable;
 
 /**
  * Читает файл документации в строки таблицы: листы Excel (xlsx, xls, ods, csv)
- * или текст PDF, разбитый на колонки по широким пробелам.
+ * или текст PDF, разбитый на колонки по широким пробелам; скан PDF распознаётся (Tesseract).
  */
 class DocumentReader
 {
@@ -24,6 +24,9 @@ class DocumentReader
 
     /** Смете хватает трёх десятков колонок; оформление «на весь лист» (до XFD) не читаем. */
     private const MAX_COLUMNS = 40;
+
+    /** Больше страниц скана не распознаём: страница — 5–15 секунд работы сервера. */
+    private const OCR_MAX_PAGES = 30;
 
     public function __construct(
         private readonly ProcessFactory $process,
@@ -110,7 +113,8 @@ class DocumentReader
 
         $text = $result->output();
         if (trim($text) === '') {
-            throw new EstimateReadException('В PDF нет текста — похоже, это скан или чертёж. Сканы считаются на следующем этапе.');
+            // Скан: текст распознаём (Tesseract). Строки — «подпись | число | число».
+            return $this->ocrRows($path);
         }
 
         $rows = [];
@@ -123,5 +127,89 @@ class DocumentReader
         }
 
         return $rows;
+    }
+
+    /**
+     * Распознаёт скан PDF постранично. Длинные сметы — первые 2 и последние страницы:
+     * итоги («Всего по смете», материалы, оборудование) стоят в конце.
+     *
+     * @return list<list<string>>
+     */
+    private function ocrRows(string $path): array
+    {
+        $pages = $this->pageCount($path);
+        if ($pages === 0) {
+            throw new EstimateReadException('PDF не прочитан: не удалось узнать число страниц.');
+        }
+
+        $selected = $pages <= self::OCR_MAX_PAGES
+            ? range(1, $pages)
+            : [1, 2, ...range($pages - self::OCR_MAX_PAGES + 3, $pages)];
+
+        $dir = sys_get_temp_dir().'/ocr-'.bin2hex(random_bytes(6));
+        @mkdir($dir);
+        $rows = [];
+
+        try {
+            foreach ($selected as $page) {
+                $image = $dir.'/page-'.$page;
+                $this->process->newPendingProcess()->timeout(120)->run([
+                    'pdftoppm', '-r', '200', '-gray', '-png', '-f', (string) $page, '-l', (string) $page, '-singlefile', $path, $image,
+                ]);
+                $result = $this->process->newPendingProcess()->timeout(180)->run([
+                    'tesseract', $image.'.png', 'stdout', '-l', 'rus+eng', '--psm', '6',
+                ]);
+                @unlink($image.'.png');
+
+                if (! $result->successful()) {
+                    throw new EstimateReadException('Скан не распознан: '.trim($result->errorOutput()));
+                }
+
+                foreach (preg_split('/\R/u', $result->output()) ?: [] as $line) {
+                    $row = $this->ocrRow($line);
+                    if ($row !== []) {
+                        $rows[] = $row;
+                    }
+                }
+            }
+        } finally {
+            @rmdir($dir);
+        }
+
+        if ($rows === []) {
+            throw new EstimateReadException('Скан не распознан: на страницах нет текста — похоже, это чертёж.');
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Строка распознанного текста → [подпись, число, число…]: распознавание не
+     * сохраняет колонки, а для итогов сметы нужны подпись и суммы после неё.
+     *
+     * @return list<string>
+     */
+    public function ocrRow(string $line): array
+    {
+        $line = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $line) ?? '');
+        if ($line === '') {
+            return [];
+        }
+
+        $number = '\d{1,3}(?: \d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?';
+        if (preg_match('/^(.*?[^\d\s.,])?\s*((?:(?:'.$number.')\s*)+)$/u', $line, $m) !== 1 || trim($m[2]) === '') {
+            return [$line];
+        }
+
+        preg_match_all('/'.$number.'/u', $m[2], $numbers);
+
+        return [trim($m[1]), ...$numbers[0]];
+    }
+
+    private function pageCount(string $path): int
+    {
+        $result = $this->process->newPendingProcess()->timeout(30)->run(['pdfinfo', $path]);
+
+        return preg_match('/^Pages:\s+(\d+)/m', $result->output(), $m) === 1 ? (int) $m[1] : 0;
     }
 }

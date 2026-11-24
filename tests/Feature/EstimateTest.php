@@ -217,16 +217,45 @@ class EstimateTest extends TestCase
         $this->assertSame('Монтаж и настройка видеорегистратора', $lines[1]->priceItem?->name);
     }
 
-    public function test_scanned_pdf_gets_clear_message(): void
+    public function test_scanned_estimate_is_recognized_and_totals_taken(): void
     {
-        Process::fake(['*pdftotext*' => Process::result('')]);
+        // Скан сметы заказчика: текста нет — страницы распознаются Tesseract.
+        Process::fake([
+            '*pdftotext*' => Process::result(''),
+            '*pdfinfo*' => Process::result("Title: смета\nPages:          2\n"),
+            '*pdftoppm*' => Process::result(''),
+            '*tesseract*' => Process::sequence()
+                ->push(Process::result("ЛОКАЛЬНЫЙ СМЕТНЫЙ РАСЧЕТ № 02-01-01\nМонтаж извещателей 12 шт\n"))
+                ->push(Process::result("Итого по разделу 1 98 000,00\nВСЕГО по смете 1 041 495,44\nв т.ч. материалы 51 599,06\nоборудование 0\n")),
+        ]);
+        $contract = Contract::factory()->create(['amount_kopecks' => 300_000_000]);
+
+        $this->actingAs($this->admin())->post('/tenders/'.$contract->id.'/estimate/files', [
+            'files' => [UploadedFile::fake()->create('СМ-СПС скан.pdf', 50, 'application/pdf')],
+        ]);
+
+        $file = EstimateFile::query()->sole();
+        $this->assertSame(EstimateFileStatus::Parsed, $file->status);
+        $this->assertSame(104_149_544, $file->norm_total_kopecks);
+        $this->assertSame(5_159_906, $file->norm_materials_kopecks);
+        Process::assertRan(fn ($process): bool => str_contains(implode(' ', (array) $process->command), 'tesseract') && str_contains(implode(' ', (array) $process->command), 'rus'));
+    }
+
+    public function test_scan_without_text_gets_clear_message(): void
+    {
+        Process::fake([
+            '*pdftotext*' => Process::result(''),
+            '*pdfinfo*' => Process::result("Pages: 1\n"),
+            '*pdftoppm*' => Process::result(''),
+            '*tesseract*' => Process::result(''),
+        ]);
         $contract = Contract::factory()->create();
 
         $this->actingAs($this->admin())->post('/tenders/'.$contract->id.'/estimate/files', [
-            'files' => [UploadedFile::fake()->create('скан.pdf', 50, 'application/pdf')],
+            'files' => [UploadedFile::fake()->create('чертёж.pdf', 50, 'application/pdf')],
         ]);
 
-        $this->assertStringContainsString('скан', (string) EstimateFile::query()->sole()->error);
+        $this->assertStringContainsString('чертёж', (string) EstimateFile::query()->sole()->error);
     }
 
     public function test_export_to_excel_with_formulas(): void

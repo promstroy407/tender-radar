@@ -14,7 +14,8 @@ class ParseEstimateFile implements ShouldQueue
 {
     use Queueable;
 
-    public int $timeout = 300;
+    // Скан сметы распознаётся постранично — до получаса на большой файл.
+    public int $timeout = 1500;
 
     public int $tries = 1;
 
