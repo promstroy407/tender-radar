@@ -26,9 +26,14 @@ class NotifyNewLead implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [60, 300];
 
+    /** Своя очередь: воркер берёт её первой, заявка не ждёт распознавания смет. */
+    public const QUEUE = 'notify';
+
     public function __construct(
         public readonly int $dealId,
-    ) {}
+    ) {
+        $this->onQueue(self::QUEUE);
+    }
 
     public function handle(OwnerChatService $owner, Container $container, LoggerInterface $log): void
     {

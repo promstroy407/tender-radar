@@ -95,7 +95,7 @@ class LeadNotificationTest extends TestCase
 
         $id = $this->sendLead()->assertCreated()->json('deal_id');
 
-        Queue::assertPushed(NotifyNewLead::class, fn (NotifyNewLead $job): bool => $job->dealId === $id);
+        Queue::assertPushedOn('notify', NotifyNewLead::class, fn (NotifyNewLead $job): bool => $job->dealId === $id);
     }
 
     public function test_bot_not_configured_is_logged_not_failed(): void

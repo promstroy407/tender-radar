@@ -25,8 +25,11 @@ class DocumentReader
     /** Смете хватает трёх десятков колонок; оформление «на весь лист» (до XFD) не читаем. */
     private const MAX_COLUMNS = 40;
 
-    /** Больше страниц скана не распознаём: страница — 5–15 секунд работы сервера. */
-    private const OCR_MAX_PAGES = 30;
+    /**
+     * Страниц скана на распознавание: первая (шапка) и последние (итоги сметы).
+     * Страница — 5–15 секунд работы сервера, а сканов в документации много.
+     */
+    private const OCR_MAX_PAGES = 8;
 
     /** Меньше стольких букв и цифр на страницу — это скан (бывает лишь штамп или номер листа). */
     private const SCAN_MAX_CHARS_PER_PAGE = 30;
@@ -135,7 +138,7 @@ class DocumentReader
     }
 
     /**
-     * Распознаёт скан PDF постранично. Длинные сметы — первые 2 и последние страницы:
+     * Распознаёт скан PDF постранично. Длинные сметы — первая и последние страницы:
      * итоги («Всего по смете», материалы, оборудование) стоят в конце.
      *
      * @return list<list<string>>
@@ -149,7 +152,7 @@ class DocumentReader
 
         $selected = $pages <= self::OCR_MAX_PAGES
             ? range(1, $pages)
-            : [1, 2, ...range($pages - self::OCR_MAX_PAGES + 3, $pages)];
+            : [1, ...range($pages - self::OCR_MAX_PAGES + 2, $pages)];
 
         $dir = sys_get_temp_dir().'/ocr-'.bin2hex(random_bytes(6));
         @mkdir($dir);
