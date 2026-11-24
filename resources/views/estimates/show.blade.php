@@ -28,12 +28,12 @@
                 <p class="muted" style="color:var(--ink2)">Работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в контракте ещё материалы и оборудование).</p>
             @endif
             @if ($summary->fromCustomerEstimate())
-                <p class="muted">Взято из сметы заказчика: итог без материалов, оборудования и НДС.@if ($summary->priceListKopecks > 0) Для сравнения, по проекту и ведомостям — {{ $money->format($summary->priceListKopecks) }}.@endif</p>
+                <p class="muted">Взято из сметы заказчика: итог без материалов, оборудования и НДС.@if ($summary->priceListKopecks > 0) Для сравнения, по нашему прайсу посчитано {{ $summary->linesPriced }} из {{ $summary->linesTotal - $summary->linesSkipped }} позиций проекта — {{ $money->format($summary->priceListKopecks) }}.@endif</p>
             @else
                 <p class="muted">Посчитано по проекту и ведомостям: {{ $summary->linesPriced }} работ по нормам ГЭСН и ставкам региона «{{ $contract->region->name }}», с накладными и прибылью, без материалов.</p>
             @endif
             @if ($summary->linesUnmatched + $summary->linesNoPrice > 0)
-                <p class="muted" style="color:var(--hotink)">Не посчитано позиций: {{ $summary->linesUnmatched + $summary->linesNoPrice }} — работ, которых нет в нашем прайсе. Список — ниже, в «Все позиции».</p>
+                <p class="muted" style="color:var(--hotink)">Не посчитано позиций: {{ $summary->linesUnmatched + $summary->linesNoPrice }} — работ, которых нет в нашем прайсе. Список — ниже, в «Не посчитано».</p>
             @endif
         @elseif ($pending)
             <p class="muted">Документация читается — просчёт появится через минуту-две.</p>
@@ -67,6 +67,24 @@
                 @endforeach
             </ul>
             <p class="muted" style="font-size:12px">Это прикидка для себя, не смета для отправки. Материалы считаются отдельно.</p>
+        </section>
+    @endif
+
+    @if ($summary && $summary->unpriced !== [])
+        <section class="card">
+            <h3 class="section-title">Не посчитано ({{ count($summary->unpriced) }})</h3>
+            <p class="muted" style="font-size:12px">Этих работ нет в нашем прайсе или у них нет цены — в «Работы» они не вошли. Добавить цену: «Прайс работ»; сопоставить вручную — в «Все позиции» ниже.</p>
+            <ul class="work-list">
+                @foreach (array_slice($summary->unpriced, 0, 150) as $row)
+                    <li>
+                        <span class="work-name">{{ $row['name'] }}</span>
+                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}</span><span style="color:var(--hotink)">{{ $row['reason'] }}</span></span>
+                    </li>
+                @endforeach
+            </ul>
+            @if (count($summary->unpriced) > 150)
+                <p class="muted">И ещё {{ count($summary->unpriced) - 150 }} — в «Все позиции».</p>
+            @endif
         </section>
     @endif
 

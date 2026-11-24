@@ -17,6 +17,7 @@ final readonly class EstimateSummary
     /**
      * @param  list<array{section: PriceSection, kopecks: int, lines: int}>  $sections  работы по разделам, крупные сверху
      * @param  list<array{name: string, quantity_milli: int, unit: string|null, kopecks: int}>  $topLines  самые дорогие работы
+     * @param  list<array{name: string, quantity_milli: int, unit: string|null, reason: string}>  $unpriced  что не посчитано и почему
      */
     public function __construct(
         public int $normativeKopecks,
@@ -30,6 +31,7 @@ final readonly class EstimateSummary
         public int $linesSkipped,
         public array $sections = [],
         public array $topLines = [],
+        public array $unpriced = [],
     ) {}
 
     /** Работы: по смете заказчика, если она есть, иначе — наш просчёт по позициям. */

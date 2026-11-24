@@ -34,6 +34,7 @@ class EstimateCalculator
         $work = $priced = $unmatched = $noPrice = $skipped = 0;
         $bySection = [];
         $top = [];
+        $unpriced = [];
 
         foreach ($lines as $line) {
             if ($line->match === LineMatch::Skip) {
@@ -47,8 +48,10 @@ class EstimateCalculator
 
             if ($line->priceItem === null) {
                 $unmatched++;
+                $unpriced[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'reason' => 'нет в прайсе'];
             } elseif ($lineWork === null) {
                 $noPrice++;
+                $unpriced[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'reason' => 'нет цены: «'.$line->priceItem->name.'»'];
             } else {
                 $priced++;
                 $work += $lineWork;
@@ -83,6 +86,7 @@ class EstimateCalculator
             linesSkipped: $skipped,
             sections: $this->sortByKopecks(array_values($bySection)),
             topLines: array_slice($this->sortByKopecks($top), 0, self::TOP_LINES),
+            unpriced: $unpriced,
         );
     }
 
