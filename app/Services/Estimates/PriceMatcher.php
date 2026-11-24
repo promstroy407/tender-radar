@@ -10,7 +10,8 @@ use Illuminate\Support\Collection;
 /**
  * Сопоставляет позицию сметы с позицией нашего прайса по ключевым словам.
  * Побеждает самая конкретная фраза (больше совпавших букв); единицы должны
- * быть одного рода — метры к метрам, штуки к штукам.
+ * быть одного рода — метры к метрам, штуки к штукам. Демонтаж сопоставляется
+ * только с позициями демонтажа, монтаж — только с монтажом: цены у них разные.
  */
 class PriceMatcher
 {
@@ -24,11 +25,12 @@ class PriceMatcher
     public function match(string $name, ?string $unit, Collection $items): ?PriceItem
     {
         $text = $this->normalize($name);
+        $demolition = $this->isDemolition($text);
         $best = null;
         $bestScore = 0;
 
         foreach ($items as $item) {
-            if (! $this->units->compatible($unit, $item->unit)) {
+            if ($item->isDemolition() !== $demolition || ! $this->units->compatible($unit, $item->unit)) {
                 continue;
             }
 
@@ -64,6 +66,12 @@ class PriceMatcher
         }
 
         return $score;
+    }
+
+    /** «Демонтаж», «разборка», «снятие» — в любом месте, в том числе в скобках после работы. */
+    public function isDemolition(string $name): bool
+    {
+        return preg_match('/(^|\s)(демонтаж|разборк|снят(ие|ия))/u', $this->normalize($name)) === 1;
     }
 
     private function normalize(string $text): string

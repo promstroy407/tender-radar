@@ -24,11 +24,21 @@ class PriceDraftBuilder
     ];
 
     /** Слова, по которым позиции не различаются. */
-    private const STOP_WORDS = ['для', 'или', 'при', 'без', 'под', 'над', 'тип', 'марка', 'монтаж', 'установка', 'прокладка'];
+    private const STOP_WORDS = ['для', 'или', 'при', 'без', 'под', 'над', 'тип', 'марка', 'монтаж', 'установка', 'прокладка', 'демонтаж', 'разборка', 'снятие'];
+
+    public function __construct(
+        private readonly PriceMatcher $matcher,
+    ) {}
 
     public function build(string $name, ?string $unit): PriceDraft
     {
         $lower = mb_strtolower($name);
+        $name = trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
+
+        // Строка с демонтажем сопоставится только с позицией демонтажа — название начинаем с него.
+        if ($this->matcher->isDemolition($name) && ! str_starts_with($lower, 'демонтаж')) {
+            $name = 'Демонтаж: '.$name;
+        }
 
         $section = PriceSection::Electric;
         foreach (self::SECTIONS as $value => $pattern) {
@@ -41,7 +51,7 @@ class PriceDraftBuilder
 
         return new PriceDraft(
             section: $section,
-            name: mb_substr(trim(preg_replace('/\s+/u', ' ', $name) ?? $name), 0, 255),
+            name: mb_substr($name, 0, 255),
             unit: $this->unit($unit),
             keywords: $this->keywords($lower),
         );

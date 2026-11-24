@@ -31,6 +31,12 @@ class PriceItem extends Model
     /** @use HasFactory<PriceItemFactory> */
     use HasFactory;
 
+    /** Позиция демонтажа: по ней считаются только строки сметы с демонтажем. */
+    public function isDemolition(): bool
+    {
+        return str_starts_with(mb_strtolower($this->name), 'демонтаж');
+    }
+
     /**
      * Ключевые фразы: каждая — набор слов, которые все должны встретиться в позиции сметы.
      *
