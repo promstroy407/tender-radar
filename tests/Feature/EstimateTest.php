@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\EstimateFileStatus;
 use App\Enums\LineMatch;
+use App\Jobs\ParseEstimateFile;
 use App\Models\Contract;
 use App\Models\Estimate;
 use App\Models\EstimateFile;
@@ -249,6 +250,17 @@ class EstimateTest extends TestCase
         // Работы = 7 840 541,41 − 1 485 345,19 − 509 695,75.
         $this->assertSame(584_550_047, $file->normativeTotals()?->worksKopecks());
         Process::assertRan(fn ($process): bool => str_contains(implode(' ', (array) $process->command), 'tesseract') && str_contains(implode(' ', (array) $process->command), 'rus'));
+    }
+
+    public function test_interrupted_parsing_does_not_hang_as_pending(): void
+    {
+        $file = EstimateFile::factory()->create(['status' => EstimateFileStatus::Pending]);
+
+        (new ParseEstimateFile($file))->failed(new \RuntimeException('killed'));
+
+        $file->refresh();
+        $this->assertSame(EstimateFileStatus::Failed, $file->status);
+        $this->assertStringContainsString('Прочитать заново', (string) $file->error);
     }
 
     public function test_scan_without_text_gets_clear_message(): void

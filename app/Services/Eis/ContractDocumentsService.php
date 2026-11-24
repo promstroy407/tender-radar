@@ -129,7 +129,8 @@ class ContractDocumentsService
             $path = (string) tempnam(sys_get_temp_dir(), 'doc');
             file_put_contents($path, $bytes);
             try {
-                $this->estimates->addUploads($estimate, [new UploadedFile($path, $document->name, null, null, true)]);
+                // Автопросчёт (без пользователя) — в общей очереди; по кнопке — без очереди.
+                $this->estimates->addUploads($estimate, [new UploadedFile($path, $document->name, null, null, true)], urgent: $user !== null);
                 $loaded++;
             } finally {
                 @unlink($path);

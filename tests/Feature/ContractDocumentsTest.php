@@ -197,6 +197,8 @@ class ContractDocumentsTest extends TestCase
             ->assertSee('Кабель ВВГнг 3х2,5 | м | 120');
         $this->actingAs(User::factory()->create())->get('/estimate-files/'.$file->id.'/text')->assertForbidden();
         Queue::assertPushed(ParseEstimateFile::class, 1);
+        // По кнопке человека — разбор без очереди за автопросчётом.
+        Queue::assertPushedOn('documents', ParseEstimateFile::class);
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('individualPerson_token', self::TOKEN));
         Http::assertSentCount(1);
     }

@@ -47,7 +47,7 @@ class EstimateService
      * @param  list<UploadedFile>  $uploads
      * @return list<EstimateFile>
      */
-    public function addUploads(Estimate $estimate, array $uploads): array
+    public function addUploads(Estimate $estimate, array $uploads, bool $urgent = true): array
     {
         $files = [];
         foreach ($uploads as $upload) {
@@ -55,13 +55,13 @@ class EstimateService
             $extension = strtolower($upload->getClientOriginalExtension());
 
             if ($extension === 'zip') {
-                array_push($files, ...$this->addZip($estimate, (string) $upload->getRealPath(), $name));
+                array_push($files, ...$this->addZip($estimate, (string) $upload->getRealPath(), $name, $urgent));
 
                 continue;
             }
 
             $path = $this->storage->disk('local')->putFileAs($this->folder($estimate), $upload, Str::uuid()->toString().'.'.$extension);
-            $files[] = $this->register($estimate, $name, (string) $path, (int) $upload->getSize());
+            $files[] = $this->register($estimate, $name, (string) $path, (int) $upload->getSize(), $urgent);
         }
 
         return $files;
@@ -70,7 +70,7 @@ class EstimateService
     public function reparse(EstimateFile $file): void
     {
         $file->forceFill(['status' => EstimateFileStatus::Pending, 'error' => null])->save();
-        $this->bus->dispatch(new ParseEstimateFile($file));
+        $this->bus->dispatch(new ParseEstimateFile($file, urgent: true));
     }
 
     /**
@@ -114,7 +114,7 @@ class EstimateService
     /**
      * @return list<EstimateFile>
      */
-    private function addZip(Estimate $estimate, string $zipPath, string $zipName): array
+    private function addZip(Estimate $estimate, string $zipPath, string $zipName, bool $urgent): array
     {
         $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
@@ -151,14 +151,14 @@ class EstimateService
 
             $path = $this->folder($estimate).'/'.Str::uuid()->toString().'.'.$extension;
             $this->storage->disk('local')->put($path, $content);
-            $files[] = $this->register($estimate, $label, $path, strlen($content));
+            $files[] = $this->register($estimate, $label, $path, strlen($content), $urgent);
         }
         $zip->close();
 
         return $files;
     }
 
-    private function register(Estimate $estimate, string $name, string $path, int $size): EstimateFile
+    private function register(Estimate $estimate, string $name, string $path, int $size, bool $urgent): EstimateFile
     {
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 
@@ -176,7 +176,7 @@ class EstimateService
             'status' => EstimateFileStatus::Pending,
         ]);
 
-        $this->bus->dispatch(new ParseEstimateFile($file));
+        $this->bus->dispatch(new ParseEstimateFile($file, $urgent));
 
         return $file;
     }
