@@ -8,20 +8,30 @@ use App\Data\ContractSearch;
 use App\Enums\ContractFilter;
 use App\Enums\ContractKind;
 use App\Models\Contract;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class ContractService
 {
     /**
      * Список контрактов для главного экрана: новые сверху, горячие — с фильтром «Горячие».
+     * Для пользователя ещё не открытые им — выше открытых.
      *
      * @return LengthAwarePaginator<int, Contract>
      */
     public function search(ContractSearch $search): LengthAwarePaginator
     {
-        return $this->query($search)
-            ->with(['company', 'region'])
+        $query = $this->query($search)->with(['company', 'region']);
+
+        if ($search->viewerId !== null) {
+            $viewer = $search->viewerId;
+            $query->withExists(['viewers as viewed' => fn (Builder $users): Builder => $users->whereKey($viewer)])
+                ->orderBy('viewed');
+        }
+
+        return $query
             ->orderByDesc('signed_at')
             ->orderByDesc('id')
             ->paginate($search->perPage);
@@ -40,6 +50,12 @@ class ContractService
         }
 
         return $result;
+    }
+
+    /** Пользователь открыл тендер: в ленте он станет бледнее и уйдёт ниже. */
+    public function markViewed(Contract $contract, User $user): void
+    {
+        $contract->viewers()->syncWithoutDetaching([$user->id => ['viewed_at' => Carbon::now()]]);
     }
 
     /** Самый свежий контракт — образец для предпросмотра шаблона КП. */
@@ -81,6 +97,16 @@ class ContractService
 
         if ($search->onlyNew) {
             $query->whereDoesntHave('deal');
+        }
+
+        if ($search->onlyUnseen && $search->viewerId !== null) {
+            $viewer = $search->viewerId;
+            $query->whereDoesntHave('viewers', fn (Builder $users): Builder => $users->whereKey($viewer));
+        }
+
+        // Полезная документация загружается в просчёт сама — файлы просчёта и есть признак.
+        if ($search->onlyWithDocuments) {
+            $query->whereHas('estimate.files');
         }
 
         match ($search->filter) {

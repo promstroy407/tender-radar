@@ -12,21 +12,33 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
         </a>
     </div>
+    @php
+        // Переключатели «с проектом» и «непросмотренные» сохраняются при смене фильтра.
+        $toggles = array_filter(['docs' => $withDocs ? 1 : null, 'unseen' => $unseen ? 1 : null]);
+        $kind = $active->value === 'all' ? [] : ['filter' => $active->value];
+    @endphp
     <nav class="chips" aria-label="Фильтр">
         @foreach ($filters as $filter)
             <a class="chip {{ $filter === $active ? 'active' : '' }}"
-               href="{{ route('home', $filter->value === 'all' ? [] : ['filter' => $filter->value]) }}"
+               href="{{ route('home', ($filter->value === 'all' ? [] : ['filter' => $filter->value]) + $toggles) }}"
                @if ($filter === $active) aria-current="page" @endif>
                 {{ $filter->label() }} <span class="n">{{ $counts[$filter->value] }}</span>
             </a>
         @endforeach
     </nav>
+    <nav class="chips toggles" aria-label="Дополнительно">
+        <a class="chip {{ $withDocs ? 'active' : '' }}" href="{{ route('home', $kind + array_filter(['docs' => $withDocs ? null : 1, 'unseen' => $unseen ? 1 : null])) }}" @if ($withDocs) aria-pressed="true" @endif>С проектом или сметой</a>
+        <a class="chip {{ $unseen ? 'active' : '' }}" href="{{ route('home', $kind + array_filter(['docs' => $withDocs ? 1 : null, 'unseen' => $unseen ? null : 1])) }}" @if ($unseen) aria-pressed="true" @endif>Непросмотренные</a>
+    </nav>
 @endsection
 
 @section('content')
     @forelse ($contracts as $contract)
-        <article class="card tender">
+        <article class="card tender {{ $contract->viewed ? 'viewed' : '' }}">
             <div class="tags">
+                @if ($contract->viewed)
+                    <span class="badge seen">Просмотрено</span>
+                @endif
                 @if ($contract->isHot())
                     <span class="badge hot">ГОРЯЧИЙ · СУБПОДРЯД СМП</span>
                 @endif
@@ -48,7 +60,7 @@
         </article>
     @empty
         <div class="card empty">
-            <h2>Новых тендеров нет</h2>
+            <h2>{{ $unseen || $withDocs ? 'Под эти условия тендеров нет' : 'Новых тендеров нет' }}</h2>
             <p class="muted">Сбор из ЕИС подключится, когда будет токен. Чтобы посмотреть, как всё работает, загрузите демо-тендеры в «Настройках».</p>
             <div class="row" style="justify-content:center">
                 <a class="button secondary" href="{{ route('settings') }}">Открыть настройки</a>

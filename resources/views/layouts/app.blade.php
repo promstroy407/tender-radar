@@ -83,6 +83,10 @@
         .chip { flex:none; min-height:36px; padding:0 14px; border-radius:18px; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px; background:#fff; color:var(--ink2); border:1px solid var(--field); }
         .chip.active { background:var(--ink); color:#fff; border-color:var(--ink); }
         .chip .n { opacity:.75; }
+        .chips.toggles { margin-top:8px; }
+        .chips.toggles .chip { min-height:32px; font-weight:500; }
+        .tender.viewed { opacity:.6; }
+        .badge.seen { background:var(--field); color:var(--ink2); }
         .tender h2 { font-size:15px; font-weight:600; line-height:1.35; }
         .sum { font-size:18px; font-weight:700; white-space:nowrap; }
         .between { display:flex; justify-content:space-between; align-items:center; gap:8px; }

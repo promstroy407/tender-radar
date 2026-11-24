@@ -24,6 +24,8 @@ class ContractIndexRequest extends FormRequest
     {
         return [
             'filter' => ['sometimes', Rule::enum(ContractFilter::class)],
+            'unseen' => ['sometimes', 'boolean'],
+            'docs' => ['sometimes', 'boolean'],
             'regions' => ['sometimes', 'array', 'max:100'],
             'regions.*' => ['string', 'size:2', 'distinct', Rule::exists('regions', 'code')],
             'min_amount_kopecks' => ['sometimes', 'integer', 'min:0', 'max:9000000000000000'],
@@ -43,6 +45,9 @@ class ContractIndexRequest extends FormRequest
             minAmountKopecks: $this->has('min_amount_kopecks') ? $this->integer('min_amount_kopecks') : null,
             perPage: $this->integer('per_page', 20),
             onlyNew: $onlyNew,
+            viewerId: $this->user()?->id,
+            onlyUnseen: $this->boolean('unseen'),
+            onlyWithDocuments: $this->boolean('docs'),
         );
     }
 }

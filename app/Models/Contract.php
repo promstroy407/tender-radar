@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
@@ -45,6 +46,8 @@ use Illuminate\Support\Collection;
  * @property-read Deal|null $deal
  * @property-read Estimate|null $estimate
  * @property-read EloquentCollection<int, ContractDocument> $documents
+ * @property-read EloquentCollection<int, User> $viewers
+ * @property-read bool|null $viewed  есть, когда лента запрошена для пользователя
  */
 #[Fillable([
     'registry_number', 'notification_number', 'documents_checked_at', 'law', 'kind', 'region_code', 'subject', 'customer_name', 'customer_inn',
@@ -95,6 +98,16 @@ class Contract extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(ContractDocument::class)->orderBy('name');
+    }
+
+    /**
+     * Кто из пользователей уже открывал тендер.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function viewers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'contract_views')->withPivot('viewed_at');
     }
 
     /**

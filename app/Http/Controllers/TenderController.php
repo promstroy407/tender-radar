@@ -16,6 +16,7 @@ use App\Services\MessengerLinkBuilder;
 use App\Services\MoneyFormatter;
 use App\Services\OfferSender;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 
 /**
  * Экраны «Тендеры» (лента новых победителей) и «Карточка тендера».
@@ -42,12 +43,19 @@ class TenderController extends Controller
             'counts' => $this->contracts->counts($search),
             'filters' => ContractFilter::cases(),
             'active' => $search->filter,
+            'unseen' => $search->onlyUnseen,
+            'withDocs' => $search->onlyWithDocuments,
             'money' => $this->money,
         ]);
     }
 
-    public function show(Contract $contract): View
+    public function show(Contract $contract, Request $request): View
     {
+        $user = $request->user();
+        if ($user !== null) {
+            $this->contracts->markViewed($contract, $user);
+        }
+
         $contract->load(['company', 'region', 'offer', 'deal', 'estimate', 'documents']);
         $rendered = $this->template->render($contract);
         $documents = $this->documents->split($contract);

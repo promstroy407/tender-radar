@@ -14,6 +14,9 @@ final readonly class ContractSearch
     /**
      * @param  list<string>  $regionCodes  пустой список — все включённые регионы
      * @param  bool  $onlyNew  только контракты, по которым КП ещё не отправлено и не отклонено
+     * @param  int|null  $viewerId  для кого лента: его просмотренные — ниже и с отметкой
+     * @param  bool  $onlyUnseen  только ещё не открытые этим пользователем
+     * @param  bool  $onlyWithDocuments  только тендеры, где есть проект, смета или ведомость (они загружены в просчёт)
      */
     public function __construct(
         public ContractFilter $filter = ContractFilter::All,
@@ -21,10 +24,13 @@ final readonly class ContractSearch
         public ?int $minAmountKopecks = null,
         public int $perPage = 20,
         public bool $onlyNew = false,
+        public ?int $viewerId = null,
+        public bool $onlyUnseen = false,
+        public bool $onlyWithDocuments = false,
     ) {}
 
     public function withFilter(ContractFilter $filter): self
     {
-        return new self($filter, $this->regionCodes, $this->minAmountKopecks, $this->perPage, $this->onlyNew);
+        return new self($filter, $this->regionCodes, $this->minAmountKopecks, $this->perPage, $this->onlyNew, $this->viewerId, $this->onlyUnseen, $this->onlyWithDocuments);
     }
 }

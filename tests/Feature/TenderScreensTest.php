@@ -8,6 +8,8 @@ use App\Enums\DealStatus;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Deal;
+use App\Models\Estimate;
+use App\Models\EstimateFile;
 use App\Models\Offer;
 use App\Models\Region;
 use App\Models\User;
@@ -40,6 +42,43 @@ class TenderScreensTest extends TestCase
             ->assertOk()
             ->assertSee($hot->subject)
             ->assertDontSee('Видеонаблюдение в поликлинике');
+    }
+
+    public function test_opened_tender_is_marked_viewed_for_this_user_only(): void
+    {
+        $old = Contract::factory()->create(['subject' => 'Открытый раньше', 'signed_at' => '2026-11-20']);
+        Contract::factory()->create(['subject' => 'Ещё не открытый', 'signed_at' => '2026-11-10']);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get('/tenders/'.$old->id)->assertOk();
+
+        // Просмотренный — ниже непросмотренного, хотя он свежее.
+        $this->actingAs($admin)->get('/')
+            ->assertOk()
+            ->assertSeeInOrder(['Ещё не открытый', 'Просмотрено', 'Открытый раньше']);
+
+        $this->actingAs($admin)->get('/?unseen=1')
+            ->assertOk()
+            ->assertSee('Ещё не открытый')
+            ->assertDontSee('Открытый раньше');
+
+        // У другого пользователя свой список.
+        $this->actingAs($this->admin())->get('/')->assertOk()->assertDontSee('Просмотрено');
+    }
+
+    public function test_filter_with_documents_shows_only_tenders_with_files_in_estimate(): void
+    {
+        $withDocs = Contract::factory()->create(['subject' => 'Монтаж АПС школы']);
+        EstimateFile::factory()->for(Estimate::factory()->state(['contract_id' => $withDocs->id]))->create();
+        Contract::factory()->create(['subject' => 'Без документации']);
+
+        $this->actingAs($this->admin())->get('/?docs=1')
+            ->assertOk()
+            ->assertSee('Монтаж АПС школы')
+            ->assertDontSee('Без документации')
+            ->assertSee('docs=1', false);
+
+        $this->actingAs($this->admin())->get('/?docs=x')->assertSessionHasErrors('docs');
     }
 
     public function test_feed_respects_region_threshold(): void
