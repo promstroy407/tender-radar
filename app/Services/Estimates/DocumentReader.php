@@ -164,8 +164,9 @@ class DocumentReader
                 $this->process->newPendingProcess()->timeout(120)->run([
                     'pdftoppm', '-r', '200', '-gray', '-png', '-f', (string) $page, '-l', (string) $page, '-singlefile', $path, $image,
                 ]);
+                // --psm 1: сам определяет поворот страницы — сметы часто сканируют боком.
                 $result = $this->process->newPendingProcess()->timeout(180)->run([
-                    'tesseract', $image.'.png', 'stdout', '-l', 'rus+eng', '--psm', '6',
+                    'tesseract', $image.'.png', 'stdout', '-l', 'rus+eng', '--psm', '1',
                 ]);
                 @unlink($image.'.png');
 
