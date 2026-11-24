@@ -43,6 +43,7 @@ class NormativeTotalsExtractor
     {
         $total = $materials = $equipment = null;
         $totalRank = PHP_INT_MAX;
+        $commissioning = false;
 
         foreach ($tables as $rows) {
             foreach ($rows as $row) {
@@ -51,6 +52,9 @@ class NormativeTotalsExtractor
                         continue;
                     }
                     $label = $this->normalize($cell);
+                    if (str_starts_with($label, 'пусконаладочные работы')) {
+                        $commissioning = true;
+                    }
 
                     // В форме 421/пр (ГРАНД-Смета) итог сметы — строка «Всего» после «Итоги по смете»;
                     // ловим только точное совпадение, иначе «Всего по позиции» тоже сошло бы.
@@ -73,6 +77,11 @@ class NormativeTotalsExtractor
                     break;
                 }
             }
+        }
+
+        // В смете на пусконаладку материалов нет — строки «Материалы» может не быть.
+        if ($materials === null && $commissioning) {
+            $materials = 0;
         }
 
         // Без строки материалов это может быть не смета, а любая таблица с «итого».

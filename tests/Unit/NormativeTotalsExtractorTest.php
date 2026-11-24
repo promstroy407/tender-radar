@@ -35,6 +35,18 @@ class NormativeTotalsExtractorTest extends TestCase
         ]]));
     }
 
+    public function test_commissioning_estimate_without_materials_line(): void
+    {
+        $totals = $this->extractor()->extract([[
+            ['Пусконаладочные работы', '412 300,10'],
+            ['Итоги по смете:'],
+            ['Всего', '450 120,55'],
+        ]]);
+
+        $this->assertNotNull($totals);
+        $this->assertSame(45_012_055, $totals->worksKopecks());
+    }
+
     public function test_materials_bigger_than_total_is_rejected(): void
     {
         $this->assertNull($this->extractor()->extract([[
