@@ -95,7 +95,7 @@ class EstimateCalculator
             normativeKopecks: $normative,
             normativeFiles: $normativeFiles,
             priceListKopecks: $work,
-            contractKopecks: $estimate->contract?->amount_kopecks ?? 0,
+            contractKopecks: $estimate->contract->amount_kopecks ?? 0,
             linesTotal: $lines->count(),
             linesPriced: $priced,
             linesUnmatched: $unmatched,

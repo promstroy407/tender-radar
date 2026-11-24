@@ -58,7 +58,7 @@ class CalculatorController extends Controller
     {
         abort_unless($estimate->isCalculation(), 404);
         $estimate->load(['files', 'region']);
-        $region = $estimate->region?->name ?? (string) $estimate->region_code;
+        $region = $estimate->region->name ?? (string) $estimate->region_code;
 
         return view('estimates.show', $this->pages->build($estimate, $estimate->regionCode(), $request->query('filter') === 'attention') + [
             'estimate' => $estimate,

@@ -56,7 +56,7 @@ class MaterialsController extends Controller
             'money' => $this->money,
             'page' => [
                 'title' => $estimate->title(),
-                'subtitle' => 'Калькулятор · '.($estimate->region?->name ?? (string) $estimate->region_code),
+                'subtitle' => 'Калькулятор · '.($estimate->region->name ?? (string) $estimate->region_code),
                 'back' => route('calculator.show', $estimate),
                 'reread' => route('calculator.materials.reread', $estimate),
             ],

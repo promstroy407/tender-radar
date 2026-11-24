@@ -133,7 +133,7 @@ class EstimateTest extends TestCase
     {
         Queue::fake();
         $file = EstimateFile::factory()->create(['norm_total_kopecks' => 100_000, 'norm_materials_kopecks' => 10_000, 'original_name' => 'smeta.xlsx']);
-        $contract = $file->estimate->contract;
+        $contract = Contract::query()->findOrFail($file->estimate->contract_id);
 
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/materials')
             ->assertOk()
@@ -228,7 +228,7 @@ class EstimateTest extends TestCase
         $this->assertSame(LineMatch::Manual, $line->match);
         $this->assertNotNull($line->priceItem);
         // Норм в базе нет — берётся цена, вписанная вручную: 3 × 1 300 ₽.
-        $unit = $this->app->make(PriceResolver::class)->unitPrice($line->priceItem, $line->file->estimate->contract->region_code);
+        $unit = $this->app->make(PriceResolver::class)->unitPrice($line->priceItem, $line->file->estimate->regionCode());
         $this->assertSame(390_000, $line->workKopecks($unit));
 
         $this->actingAs($this->admin())->put('/estimate-lines/'.$line->id, ['price_item' => 'skip']);
@@ -354,7 +354,7 @@ class EstimateTest extends TestCase
     {
         $line = EstimateLine::factory()->create(['quantity_milli' => 2_500, 'material_kopecks' => 10_050]);
         $line->update(['price_item_id' => PriceItem::query()->where('name', 'Монтаж сирены')->value('id')]);
-        $contract = Estimate::query()->sole()->contract;
+        $contract = Contract::query()->findOrFail(Estimate::query()->sole()->contract_id);
 
         $response = $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/estimate/export');
         $response->assertOk();

@@ -73,7 +73,7 @@ class EstimateExporter
         $sheet->setCellValue('B'.($row + 2), 'Итого работы (по смете заказчика, если она есть)');
         $sheet->setCellValue('G'.($row + 2), '=IF(G'.($row + 1).'>0,G'.($row + 1).',G'.$row.')');
         $sheet->setCellValue('B'.($row + 3), 'Сумма контракта (с материалами)');
-        $sheet->setCellValue('G'.($row + 3), ($estimate->contract?->amount_kopecks ?? 0) / 100);
+        $sheet->setCellValue('G'.($row + 3), ($estimate->contract->amount_kopecks ?? 0) / 100);
         $sheet->setCellValue('B'.($row + 4), 'Работы от суммы контракта');
         $sheet->setCellValue('G'.($row + 4), '=IF(G'.($row + 3).'=0,0,G'.($row + 2).'/G'.($row + 3).')');
 

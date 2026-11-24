@@ -63,13 +63,13 @@ class Estimate extends Model
     /** Регион, по ставкам которого считаются работы. */
     public function regionCode(): string
     {
-        return $this->contract?->region_code ?? (string) $this->region_code;
+        return $this->contract->region_code ?? (string) $this->region_code;
     }
 
     /** Название для заголовка: предмет контракта или имя расчёта. */
     public function title(): string
     {
-        return $this->contract?->subject ?? (string) $this->name;
+        return $this->contract->subject ?? (string) $this->name;
     }
 
     /**
