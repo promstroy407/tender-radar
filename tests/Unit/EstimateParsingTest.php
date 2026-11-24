@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Services\Estimates\LineFilter;
 use App\Services\Estimates\NumberParser;
 use App\Services\Estimates\TableExtractor;
 use App\Services\Estimates\UnitNormalizer;
@@ -126,6 +127,6 @@ class EstimateParsingTest extends TestCase
 
     private function extractor(): TableExtractor
     {
-        return new TableExtractor(new NumberParser, new UnitNormalizer);
+        return new TableExtractor(new NumberParser, new UnitNormalizer, new LineFilter);
     }
 }

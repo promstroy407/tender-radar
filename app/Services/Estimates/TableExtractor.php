@@ -18,6 +18,7 @@ class TableExtractor
     public function __construct(
         private readonly NumberParser $numbers,
         private readonly UnitNormalizer $units,
+        private readonly LineFilter $filter,
     ) {}
 
     /**
@@ -136,7 +137,7 @@ class TableExtractor
 
     private function line(string $name, ?string $unit, int $quantityMilli, ?int $materialKopecks): ?ExtractedLine
     {
-        if ($this->units->isService($unit)) {
+        if ($this->units->isService($unit) || $this->filter->isJunk($name, $unit)) {
             return null;
         }
 

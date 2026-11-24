@@ -25,6 +25,7 @@ class EstimateCalculator
 
     public function __construct(
         private readonly PriceResolver $prices,
+        private readonly LineFilter $filter,
     ) {}
 
     /**
@@ -38,7 +39,8 @@ class EstimateCalculator
         $unpriced = [];
 
         foreach ($lines as $line) {
-            if ($line->match === LineMatch::Skip) {
+            // Мусор разбора, прочитанный до появления фильтра, тоже не показываем и не считаем.
+            if ($line->match === LineMatch::Skip || ($line->priceItem === null && $this->filter->isJunk($line->name, $line->unit))) {
                 $skipped++;
 
                 continue;
