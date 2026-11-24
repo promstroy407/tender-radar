@@ -72,7 +72,6 @@ class EstimateParser
         $items = PriceItem::query()->where('is_active', true)->get();
         $now = now();
 
-
         $this->db->transaction(function () use ($file, $lines, $items, $now, $totals, $materials): void {
             $file->lines()->delete();
             $file->materials()->delete();
