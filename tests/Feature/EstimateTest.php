@@ -227,7 +227,14 @@ class EstimateTest extends TestCase
             '*pdftoppm*' => Process::result(''),
             '*tesseract*' => Process::sequence()
                 ->push(Process::result("ЛОКАЛЬНЫЙ СМЕТНЫЙ РАСЧЕТ № 02-01-01\nМонтаж извещателей 12 шт\n"))
-                ->push(Process::result("Итого по разделу 1 98 000,00\nВСЕГО по смете 1 041 495,44\nв т.ч. материалы 51 599,06\nоборудование 0\n")),
+                // Итоги формы 421/пр (ГРАНД-Смета) так, как их отдаёт распознавание: разряды
+                // склеены, в конце строк — скобки от линий таблицы.
+                ->push(Process::result(
+                    "Материалы 1471 231,68\nОборудование 509 695,75)\nВсего по позиции 3166,40 221 648,12\n"
+                    ."Итоги по смете:\nВсего прямые затраты (справочно) 3905 627,81\nМатериалы 1485 345,19\n"
+                    ."Монтажные работы 7330 845,66\nматериалы 1485 345,19\nОборудование 509 695,75)\n"
+                    ."Инженерное оборудование 509 695,75\nВсего 7840 541,41\nСоставил:\n",
+                )),
         ]);
         $contract = Contract::factory()->create(['amount_kopecks' => 300_000_000]);
 
@@ -237,8 +244,10 @@ class EstimateTest extends TestCase
 
         $file = EstimateFile::query()->sole();
         $this->assertSame(EstimateFileStatus::Parsed, $file->status);
-        $this->assertSame(104_149_544, $file->norm_total_kopecks);
-        $this->assertSame(5_159_906, $file->norm_materials_kopecks);
+        $this->assertSame(784_054_141, $file->norm_total_kopecks);
+        $this->assertSame(148_534_519, $file->norm_materials_kopecks);
+        // Работы = 7 840 541,41 − 1 485 345,19 − 509 695,75.
+        $this->assertSame(584_550_047, $file->normativeTotals()?->worksKopecks());
         Process::assertRan(fn ($process): bool => str_contains(implode(' ', (array) $process->command), 'tesseract') && str_contains(implode(' ', (array) $process->command), 'rus'));
     }
 

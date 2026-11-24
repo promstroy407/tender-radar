@@ -52,7 +52,9 @@ class NormativeTotalsExtractor
                     }
                     $label = $this->normalize($cell);
 
-                    $rank = $this->rank($label, self::TOTAL);
+                    // В форме 421/пр (ГРАНД-Смета) итог сметы — строка «Всего» после «Итоги по смете»;
+                    // ловим только точное совпадение, иначе «Всего по позиции» тоже сошло бы.
+                    $rank = $label === 'всего' ? count(self::TOTAL) : $this->rank($label, self::TOTAL);
                     if ($rank !== null) {
                         $value = $this->valueAfter($row, $index);
                         if ($value !== null && $rank <= $totalRank) {
