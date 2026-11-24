@@ -28,8 +28,8 @@ class DocumentReader
     /** Больше страниц скана не распознаём: страница — 5–15 секунд работы сервера. */
     private const OCR_MAX_PAGES = 30;
 
-    /** Меньше стольких букв и цифр во всём PDF — это скан (бывает лишь штамп или номер листа). */
-    private const SCAN_MAX_CHARS = 200;
+    /** Меньше стольких букв и цифр на страницу — это скан (бывает лишь штамп или номер листа). */
+    private const SCAN_MAX_CHARS_PER_PAGE = 30;
 
     public function __construct(
         private readonly ProcessFactory $process,
@@ -117,7 +117,8 @@ class DocumentReader
         $text = $result->output();
         // Скан: текста нет совсем или есть только разрывы страниц и штамп — распознаём
         // (Tesseract). Строки — «подпись | число | число».
-        if (preg_match_all('/[\p{L}\p{N}]/u', $text) < self::SCAN_MAX_CHARS) {
+        $pages = max(1, substr_count($text, "\f"));
+        if (intdiv((int) preg_match_all('/[\p{L}\p{N}]/u', $text), $pages) < self::SCAN_MAX_CHARS_PER_PAGE) {
             return $this->ocrRows($path);
         }
 
