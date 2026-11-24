@@ -6,7 +6,7 @@ namespace App\Services\Estimates;
 
 /**
  * Достаёт из нормативной сметы заказчика (форма 421/пр, выгрузки ГРАНД, РИК,
- * «Строительный эксперт») строки ресурсов — материалы и оборудование:
+ * «Строительный эксперт») работы (шифр ГЭСН/ФЕР/ТЕР) и строки ресурсов — материалы и оборудование:
  * номер позиции, шифр ФСБЦ («20.2.05.04-0065») или текущей цены («ТЦ_…»),
  * наименование, единица, количество и стоимость. Стоимость — последнее число
  * строки (графа «всего в текущем уровне цен»), количество — первое после единицы.
@@ -14,6 +14,9 @@ namespace App\Services\Estimates;
 class ResourceExtractor
 {
     private const CODE = '/^(ТЦ_|ФССЦ|ТССЦ|ФСБЦ|СЦМ|КА[-_]|\d{2}\.\d\.\d{2}\.\d{2}-\d{4})/u';
+
+    /** Шифр расценки на работу: ГЭСН, ФЕР, ТЕР (м — монтаж, п — пусконаладка, р — ремонт). */
+    private const WORK_CODE = '/^(ГЭСН|ФЕР|ТЕР)[мпр]?\s?\d/u';
 
     public function __construct(
         private readonly NumberParser $numbers,
@@ -27,7 +30,7 @@ class ResourceExtractor
      * @param  list<list<list<string|int|float|null>>>  $tables
      * @return list<ExtractedMaterial>
      */
-    public function extract(array $tables): array
+    public function materials(array $tables): array
     {
         foreach ($tables as $rows) {
             $found = [];
@@ -46,11 +49,56 @@ class ResourceExtractor
     }
 
     /**
-     * @param  list<string|int|float|null>  $row
+     * Работы сметы — строки с шифром ГЭСН/ФЕР/ТЕР: наименование, единица, объём.
+     * Их цену считаем сами, по нашему прайсу, — чтобы сравнить со сметой заказчика.
+     * Берутся с первого листа, где они есть.
+     *
+     * @param  list<list<list<string|int|float|null>>>  $tables
+     * @return list<ExtractedLine>
      */
-    private function row(array $row): ?ExtractedMaterial
+    public function works(array $tables): array
     {
-        // Значимые ячейки по порядку; перенос строки внутри ячейки — отдельные значения.
+        foreach ($tables as $rows) {
+            $found = [];
+            foreach ($rows as $row) {
+                $cells = $this->cells($row);
+                if (count($cells) < 4 || preg_match('/^\d+$/', $cells[0]) !== 1 || preg_match(self::WORK_CODE, $cells[1]) !== 1) {
+                    continue;
+                }
+                $name = $this->cleanName($cells[2]);
+                $unitAt = $this->unitAt($cells);
+                if ($name === null || $unitAt === null || $this->units->isService($cells[$unitAt])) {
+                    continue;
+                }
+                $quantity = null;
+                foreach (array_slice($cells, $unitAt + 1) as $cell) {
+                    $quantity = $this->numbers->toMilli($cell);
+                    if ($quantity !== null) {
+                        break;
+                    }
+                }
+                if ($quantity === null || $quantity <= 0) {
+                    continue;
+                }
+                [$unit, $quantity] = $this->natural($cells[$unitAt], $quantity);
+                $found[] = new ExtractedLine($name, $unit, $quantity);
+            }
+            if ($found !== []) {
+                return $found;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Значимые ячейки по порядку; перенос строки внутри ячейки — отдельные значения.
+     *
+     * @param  list<string|int|float|null>  $row
+     * @return list<string>
+     */
+    private function cells(array $row): array
+    {
         $cells = [];
         foreach ($row as $cell) {
             foreach (explode("\n", (string) $cell) as $part) {
@@ -61,6 +109,45 @@ class ResourceExtractor
             }
         }
 
+        return $cells;
+    }
+
+    /**
+     * @param  list<string>  $cells
+     */
+    private function unitAt(array $cells): ?int
+    {
+        foreach (array_slice($cells, 3, null, true) as $index => $cell) {
+            if ($this->units->looksLikeUnit($cell)) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * «100 м» × 0,06 = 6 м; «10 шт» × 0,3 = 3 шт.
+     *
+     * @return array{string, int}
+     */
+    private function natural(string $unit, int $quantityMilli): array
+    {
+        $parsed = $this->units->parse($unit);
+        if ($parsed !== null && $parsed['multiplier'] > 1) {
+            return [trim((string) preg_replace('/^\d+\s*/u', '', $unit)), $quantityMilli * $parsed['multiplier']];
+        }
+
+        return [$unit, $quantityMilli];
+    }
+
+    /**
+     * @param  list<string|int|float|null>  $row
+     */
+    private function row(array $row): ?ExtractedMaterial
+    {
+        $cells = $this->cells($row);
+
         if (count($cells) < 5 || preg_match('/^\d+$/', $cells[0]) !== 1 || preg_match(self::CODE, $cells[1]) !== 1) {
             return null;
         }
@@ -70,14 +157,7 @@ class ResourceExtractor
             return null;
         }
 
-        $unitAt = null;
-        foreach (array_slice($cells, 3, null, true) as $index => $cell) {
-            if ($this->units->looksLikeUnit($cell)) {
-                $unitAt = $index;
-
-                break;
-            }
-        }
+        $unitAt = $this->unitAt($cells);
         if ($unitAt === null) {
             return null;
         }
@@ -96,13 +176,7 @@ class ResourceExtractor
             return null;
         }
 
-        // «100 м» × 0,06 = 6 м; «10 шт» × 0,3 = 3 шт.
-        $unit = $cells[$unitAt];
-        $parsed = $this->units->parse($unit);
-        if ($parsed !== null && $parsed['multiplier'] > 1) {
-            $quantity *= $parsed['multiplier'];
-            $unit = trim((string) preg_replace('/^\d+\s*/u', '', $unit));
-        }
+        [$unit, $quantity] = $this->natural($cells[$unitAt], $quantity);
 
         return new ExtractedMaterial(mb_substr($cells[1], 0, 100), $name, mb_substr($unit, 0, 32), $quantity, $total);
     }

@@ -23,7 +23,7 @@ class PriceDraftRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:500'],
             'unit' => ['nullable', 'string', 'max:20'],
-            'back' => ['nullable', 'integer', 'exists:contracts,id'],
+            'back' => ['nullable', 'integer', 'exists:estimates,id'],
         ];
     }
 }

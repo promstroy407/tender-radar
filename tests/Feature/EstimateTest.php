@@ -79,8 +79,9 @@ class EstimateTest extends TestCase
         $this->assertSame(104_149_544, $file->norm_total_kopecks);
         $this->assertSame(5_159_906, $file->norm_materials_kopecks);
         $this->assertSame(98_989_638, $file->normativeTotals()?->worksKopecks());
-        // Построчно нормативную смету не пересчитываем — только итог.
-        $this->assertSame(0, EstimateLine::query()->count());
+        // Работы сметы (строки ГЭСН) — в позиции: их считаем по нашему прайсу для сравнения.
+        $this->assertSame(1, EstimateLine::query()->count());
+        $this->assertSame(120_000, EstimateLine::query()->sole()->quantity_milli);
 
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/estimate')
             ->assertOk()
@@ -180,14 +181,14 @@ class EstimateTest extends TestCase
             ->assertSeeInOrder(['Не посчитано (1)', 'Устройство бетонной подготовки', '+ в прайс']);
 
         // «+ в прайс»: форма заполнена по строке, после сохранения строка посчитана.
-        $this->actingAs($this->admin())->get('/prices/new?'.http_build_query(['name' => 'Устройство бетонной подготовки', 'unit' => 'шт', 'back' => $contract->id]))
+        $this->actingAs($this->admin())->get('/prices/new?'.http_build_query(['name' => 'Устройство бетонной подготовки', 'unit' => 'шт', 'back' => $file->estimate_id]))
             ->assertOk()
             ->assertSee('value="Устройство бетонной подготовки"', false)
             ->assertSee('устрой бетонн подгот');
 
         $this->actingAs($this->admin())->post('/prices', [
             'section' => 'electric', 'name' => 'Бетонная подготовка', 'unit' => 'шт', 'price_rubles' => '500',
-            'keywords' => 'бетонн подгот', 'is_active' => '1', 'back' => $contract->id,
+            'keywords' => 'бетонн подгот', 'is_active' => '1', 'back' => $file->estimate_id,
         ])->assertRedirect('/tenders/'.$contract->id.'/estimate#unpriced');
 
         $this->assertNotNull(EstimateLine::query()->where('name', 'like', 'Устройство бетонной%')->value('price_item_id'));

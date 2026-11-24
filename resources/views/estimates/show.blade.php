@@ -4,7 +4,7 @@
 
 @section('top')
     <div class="top-row" style="justify-content:flex-start;gap:4px">
-        <a class="back" href="{{ route('tenders.show', $contract) }}" aria-label="Назад к тендеру">
+        <a class="back" href="{{ $page['back'] }}" aria-label="Назад">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
         </a>
         <div>
@@ -16,22 +16,29 @@
 
 @section('content')
     <section class="card">
-        <h2 style="line-height:1.35;font-size:15px">{{ $contract->subject }}</h2>
-        <p class="muted">{{ $contract->region->name }} · {{ $contract->company->name }}</p>
+        <h2 style="line-height:1.35;font-size:15px">{{ $page['title'] }}</h2>
+        <p class="muted">{{ $page['subtitle'] }}</p>
 
         @if ($summary && $summary->hasData())
             <div class="grid2">
-                <div class="kv"><span class="label">Работы — наш просчёт</span><b style="font-size:20px">{{ $money->format($summary->workKopecks()) }}</b></div>
-                <div class="kv"><span class="label">Сумма контракта</span><b>{{ $money->format($summary->contractKopecks) }}</b></div>
+                @if ($summary->fromCustomerEstimate())
+                    <div class="kv"><span class="label">Работы по смете заказчика</span><b style="font-size:20px">{{ $money->format($summary->normativeKopecks) }}</b></div>
+                    <div class="kv"><span class="label">По нашим расценкам</span><b style="font-size:20px">{{ $summary->linesPriced > 0 ? $money->format($summary->priceListKopecks) : '—' }}</b></div>
+                @else
+                    <div class="kv"><span class="label">Работы — наш просчёт</span><b style="font-size:20px">{{ $money->format($summary->workKopecks()) }}</b></div>
+                @endif
+                @if ($summary->contractKopecks > 0)
+                    <div class="kv"><span class="label">Сумма контракта</span><b>{{ $money->format($summary->contractKopecks) }}</b></div>
+                @endif
             </div>
             @if ($summary->shareLabel())
                 <p class="muted" style="color:var(--ink2)">Работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в контракте ещё материалы и оборудование).</p>
             @endif
             @if ($summary->fromCustomerEstimate())
-                <p class="muted">Взято из сметы заказчика: итог без материалов, оборудования и НДС.@if ($summary->priceListKopecks > 0) Для сравнения, по нашему прайсу посчитано {{ $summary->linesPriced }} из {{ $summary->linesTotal - $summary->linesSkipped }} позиций проекта — {{ $money->format($summary->priceListKopecks) }}.@endif</p>
-                <p><a href="{{ route('estimates.materials', $contract) }}" style="font-size:13px;font-weight:600">Лоток и комплектующие по смете заказчика →</a></p>
+                <p class="muted">По смете заказчика — итог без материалов, оборудования и НДС. По нашим расценкам — её же работы по нашему прайсу (ставки региона «{{ $page['region'] }}»): посчитано {{ $summary->linesPriced }} из {{ $summary->linesTotal - $summary->linesSkipped }} позиций.@if ($summary->linesTotal === 0) Работы сметы ещё не выбраны — нажмите «Прочитать заново» у файла сметы.@endif</p>
+                <p><a href="{{ $page['materials'] }}" style="font-size:13px;font-weight:600">Лоток и комплектующие по смете заказчика →</a></p>
             @else
-                <p class="muted">Посчитано по проекту и ведомостям: {{ $summary->linesPriced }} работ по нормам ГЭСН и ставкам региона «{{ $contract->region->name }}», с накладными и прибылью, без материалов.</p>
+                <p class="muted">Посчитано по проекту и ведомостям: {{ $summary->linesPriced }} работ по нормам ГЭСН и ставкам региона «{{ $page['region'] }}», с накладными и прибылью, без материалов.</p>
             @endif
             @if ($summary->linesUnmatched + $summary->linesNoPrice > 0)
                 <p class="muted" style="color:var(--hotink)">Не посчитано позиций: {{ $summary->linesUnmatched + $summary->linesNoPrice }} — работ, которых нет в нашем прайсе. Список — ниже, в «Не посчитано».</p>
@@ -84,7 +91,7 @@
                             @if ($row['price_item'])
                                 <a href="{{ route('prices') }}#item-{{ $row['price_item']->id }}" style="font-weight:600">нет цены: «{{ \Illuminate\Support\Str::limit($row['price_item']->name, 30) }}» →</a>
                             @else
-                                <a href="{{ route('prices.create', ['name' => $row['name'], 'unit' => $row['unit'], 'back' => $contract->id]) }}" style="font-weight:600">+ в прайс</a>
+                                <a href="{{ route('prices.create', ['name' => $row['name'], 'unit' => $row['unit'], 'back' => $estimate?->id]) }}" style="font-weight:600">+ в прайс</a>
                             @endif
                         </span>
                     </li>
@@ -133,7 +140,7 @@
             </div>
         @endif
 
-        <form method="post" action="{{ route('estimates.upload', $contract) }}" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <form method="post" action="{{ $page['upload'] }}" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
             @csrf
             <label>Добавить свои файлы (до 20 за раз, до 64 МБ каждый)
                 <input type="file" name="files[]" multiple required
@@ -145,7 +152,9 @@
             <p class="muted" style="font-size:12px">Читаются Excel, CSV и PDF с текстом. ГРАНД-Смету выгрузите в Excel. Сканы и чертежи — следующий этап.</p>
         </form>
         <div class="row" style="margin-top:8px">
-            <a class="button secondary small" href="{{ route('estimates.export', $contract) }}">Скачать в Excel</a>
+            @if ($page['export'])
+                <a class="button secondary small" href="{{ $page['export'] }}">Скачать в Excel</a>
+            @endif
             <a class="button secondary small" href="{{ route('prices') }}">Прайс работ</a>
         </div>
     </details>
@@ -154,8 +163,8 @@
         <details class="card" @if ($attention || request()->has('page')) open @endif>
         <summary>Все позиции и ручная правка ({{ $summary?->linesTotal ?? 0 }})</summary>
         <nav class="chips" style="margin:0" aria-label="Позиции">
-            <a class="chip {{ $attention ? '' : 'active' }}" href="{{ route('estimates.show', $contract) }}">Все позиции</a>
-            <a class="chip {{ $attention ? 'active' : '' }}" href="{{ route('estimates.show', ['contract' => $contract, 'filter' => 'attention']) }}">Требуют внимания</a>
+            <a class="chip {{ $attention ? '' : 'active' }}" href="{{ $page['self'] }}">Все позиции</a>
+            <a class="chip {{ $attention ? 'active' : '' }}" href="{{ $page['attention'] }}">Требуют внимания</a>
         </nav>
 
         @forelse ($lines as $line)

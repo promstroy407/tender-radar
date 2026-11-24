@@ -7,9 +7,11 @@ namespace App\Http\Controllers;
 use App\Enums\PriceSection;
 use App\Http\Requests\PriceDraftRequest;
 use App\Http\Requests\PriceItemRequest;
+use App\Models\Estimate;
 use App\Models\PriceItem;
 use App\Models\Region;
 use App\Services\Estimates\EstimateService;
+use App\Services\Estimates\EstimateUrls;
 use App\Services\Estimates\PriceDraftBuilder;
 use App\Services\Estimates\PriceResolver;
 use App\Services\MoneyFormatter;
@@ -26,16 +28,19 @@ class PriceController extends Controller
         private readonly MoneyFormatter $money,
         private readonly PriceDraftBuilder $drafts,
         private readonly EstimateService $estimates,
+        private readonly EstimateUrls $urls,
     ) {}
 
     /** Новая позиция по непосчитанной строке сметы: форма заполнена заранее. */
     public function create(PriceDraftRequest $request): View
     {
         $back = $request->validated('back');
+        $estimate = is_numeric($back) ? Estimate::query()->find((int) $back) : null;
 
         return view('prices.create', [
             'draft' => $this->drafts->build((string) $request->validated('name'), $request->validated('unit')),
-            'back' => is_numeric($back) ? (int) $back : null,
+            'back' => $estimate?->id,
+            'backUrl' => $estimate === null ? route('prices') : $this->urls->show($estimate).'#unpriced',
             'sections' => PriceSection::cases(),
             'units' => PriceItemRequest::UNITS,
         ]);
@@ -68,12 +73,12 @@ class PriceController extends Controller
     {
         $item = PriceItem::query()->create($request->toAttributes());
 
-        // Добавили из сметы тендера — пересопоставляем её и возвращаемся к списку «Не посчитано».
-        $contract = $request->backContract();
-        if ($contract !== null) {
-            $matched = $contract->estimate !== null ? $this->estimates->rematchUnmatched($contract->estimate) : 0;
+        // Добавили из сметы — пересопоставляем её и возвращаемся к списку «Не посчитано».
+        $estimate = $request->backEstimate();
+        if ($estimate !== null) {
+            $matched = $this->estimates->rematchUnmatched($estimate);
 
-            return redirect()->to(route('estimates.show', $contract).'#unpriced')
+            return redirect()->to($this->urls->show($estimate).'#unpriced')
                 ->with('status', 'Добавлено в прайс: «'.$item->name.'». Посчитано позиций: '.$matched.'.');
         }
 

@@ -46,8 +46,13 @@ class EstimateParser
                 throw new EstimateReadException('Позиций не нашли: нужна таблица с наименованием, единицей и количеством.');
             }
 
-            // Материалы и оборудование — только из нормативной сметы: там есть их стоимость.
-            $materials = $totals !== null ? $this->resources->extract($tables) : [];
+            // Нормативная смета заказчика: работы — строки ГЭСН/ФЕР/ТЕР (материалы и итоги
+            // разделов в позиции не попадают), материалы и оборудование — с их стоимостью.
+            $materials = [];
+            if ($totals !== null) {
+                $lines = $this->resources->works($tables);
+                $materials = $this->resources->materials($tables);
+            }
 
             $this->store($file, $lines, $totals, $materials);
         } catch (EstimateReadException $e) {
@@ -67,10 +72,6 @@ class EstimateParser
         $items = PriceItem::query()->where('is_active', true)->get();
         $now = now();
 
-        // Из нормативной сметы берём только итог по работам: построчно её не пересчитываем.
-        if ($totals !== null) {
-            $lines = [];
-        }
 
         $this->db->transaction(function () use ($file, $lines, $items, $now, $totals, $materials): void {
             $file->lines()->delete();

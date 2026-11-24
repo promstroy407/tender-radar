@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractDocumentsController;
 use App\Http\Controllers\DealController;
@@ -56,6 +57,15 @@ Route::middleware('auth')->group(function (): void {
         Route::get('tenders/{contract}/estimate/export', [EstimateController::class, 'export'])->name('estimates.export');
         Route::get('tenders/{contract}/materials', [MaterialsController::class, 'show'])->name('estimates.materials');
         Route::post('tenders/{contract}/materials/reread', [MaterialsController::class, 'reread'])->name('estimates.materials.reread');
+
+        Route::get('calculator', [CalculatorController::class, 'index'])->name('calculator');
+        Route::post('calculator', [CalculatorController::class, 'store'])->name('calculator.store');
+        Route::get('calculator/{estimate}', [CalculatorController::class, 'show'])->name('calculator.show');
+        Route::post('calculator/{estimate}/files', [CalculatorController::class, 'upload'])->name('calculator.upload');
+        Route::delete('calculator/{estimate}', [CalculatorController::class, 'destroy'])->name('calculator.destroy');
+        Route::get('calculator/{estimate}/export', [EstimateController::class, 'exportCalculation'])->name('calculator.export');
+        Route::get('calculator/{estimate}/materials', [MaterialsController::class, 'showCalculation'])->name('calculator.materials');
+        Route::post('calculator/{estimate}/materials/reread', [MaterialsController::class, 'rereadCalculation'])->name('calculator.materials.reread');
         Route::post('estimate-files/{file}/reparse', [EstimateController::class, 'reparse'])->name('estimates.files.reparse');
         Route::get('estimate-files/{file}/text', [EstimateController::class, 'text'])->name('estimates.files.text');
         Route::delete('estimate-files/{file}', [EstimateController::class, 'destroyFile'])->name('estimates.files.destroy');

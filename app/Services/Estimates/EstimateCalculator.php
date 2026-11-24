@@ -37,6 +37,20 @@ class EstimateCalculator
         $bySection = [];
         $top = [];
         $unpriced = [];
+        $regionCode = $estimate->regionCode();
+
+        // Есть смета заказчика с работами — по нашему прайсу считаем её же, а не проект:
+        // иначе один и тот же объём попадёт дважды.
+        $normativeIds = [];
+        foreach ($estimate->files as $file) {
+            /** @var EstimateFile $file */
+            if ($file->norm_total_kopecks !== null) {
+                $normativeIds[$file->id] = true;
+            }
+        }
+        if ($lines->contains(fn (EstimateLine $line): bool => isset($normativeIds[$line->estimate_file_id]))) {
+            $lines = $lines->filter(fn (EstimateLine $line): bool => isset($normativeIds[$line->estimate_file_id]))->values();
+        }
 
         foreach ($lines as $line) {
             // Мусор разбора, прочитанный до появления фильтра, тоже не показываем и не считаем.
@@ -47,7 +61,7 @@ class EstimateCalculator
             }
 
             $lineWork = $line->priceItem === null ? null
-                : $line->workKopecks($this->prices->unitPrice($line->priceItem, $estimate->contract->region_code));
+                : $line->workKopecks($this->prices->unitPrice($line->priceItem, $regionCode));
 
             if ($line->priceItem === null) {
                 $unmatched++;
@@ -81,7 +95,7 @@ class EstimateCalculator
             normativeKopecks: $normative,
             normativeFiles: $normativeFiles,
             priceListKopecks: $work,
-            contractKopecks: $estimate->contract->amount_kopecks,
+            contractKopecks: $estimate->contract?->amount_kopecks ?? 0,
             linesTotal: $lines->count(),
             linesPriced: $priced,
             linesUnmatched: $unmatched,

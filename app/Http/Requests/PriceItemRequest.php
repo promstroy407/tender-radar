@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\PriceSection;
-use App\Models\Contract;
+use App\Models\Estimate;
 use App\Models\PriceItem;
 use App\Services\Estimates\NumberParser;
 use Illuminate\Foundation\Http\FormRequest;
@@ -49,8 +49,8 @@ class PriceItemRequest extends FormRequest
             'gesn_code' => ['nullable', 'regex:/^\d{2}-\d{2}-\d{3}-\d{2}$/'],
             'keywords' => ['required', 'string', 'max:2000'],
             'is_active' => ['sometimes', 'boolean'],
-            // Добавляют из сметы тендера — после сохранения вернуться к ней.
-            'back' => ['nullable', 'integer', 'exists:contracts,id'],
+            // Добавляют из сметы (тендера или калькулятора) — после сохранения вернуться к ней.
+            'back' => ['nullable', 'integer', 'exists:estimates,id'],
         ];
     }
 
@@ -66,11 +66,11 @@ class PriceItemRequest extends FormRequest
         ];
     }
 
-    public function backContract(): ?Contract
+    public function backEstimate(): ?Estimate
     {
         $back = $this->validated('back');
 
-        return is_numeric($back) ? Contract::query()->with('estimate')->find((int) $back) : null;
+        return is_numeric($back) ? Estimate::query()->find((int) $back) : null;
     }
 
     /**

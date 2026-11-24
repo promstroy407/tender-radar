@@ -42,6 +42,12 @@ class EstimateService
         return Estimate::query()->firstOrCreate(['contract_id' => $contract->id], ['user_id' => $user?->id]);
     }
 
+    /** Новый расчёт в «Калькуляторе»: сторонняя смета, своё название и регион ставок. */
+    public function createCalculation(string $name, string $regionCode, User $user): Estimate
+    {
+        return Estimate::query()->create(['name' => $name, 'region_code' => $regionCode, 'user_id' => $user->id]);
+    }
+
     /**
      * Загружает файлы; ZIP раскрывается в отдельные файлы. Разбор идёт в фоне.
      *
@@ -75,14 +81,15 @@ class EstimateService
     }
 
     /**
-     * Перечитать сметы заказчика, прочитанные до выборки материалов (Excel и CSV — быстро).
+     * Перечитать сметы заказчика, прочитанные до выборки работ и материалов (Excel и CSV — быстро).
      * Возвращает, сколько файлов поставлено в очередь.
      */
-    public function rereadForMaterials(Estimate $estimate): int
+    public function rereadCustomerEstimates(Estimate $estimate): int
     {
         $count = 0;
         foreach ($estimate->files as $file) {
-            if ($file->norm_total_kopecks !== null && $file->extension() !== 'pdf' && ! $file->materials()->exists()) {
+            if ($file->norm_total_kopecks !== null && $file->extension() !== 'pdf'
+                && (! $file->materials()->exists() || ! $file->lines()->exists())) {
                 $this->reparse($file);
                 $count++;
             }
@@ -116,6 +123,18 @@ class EstimateService
     {
         $this->storage->disk('local')->delete($file->path);
         $file->delete();
+    }
+
+    /** Удалить расчёт «Калькулятора» вместе с загруженными файлами. Смету тендера так не удалить. */
+    public function deleteCalculation(Estimate $estimate): void
+    {
+        if (! $estimate->isCalculation()) {
+            return;
+        }
+        foreach ($estimate->files as $file) {
+            $this->storage->disk('local')->delete($file->path);
+        }
+        $estimate->delete();
     }
 
     /**

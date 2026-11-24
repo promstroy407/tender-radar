@@ -8,7 +8,7 @@
 
 @section('top')
     <div class="top-row" style="justify-content:flex-start;gap:4px">
-        <a class="back" href="{{ route('tenders.show', $contract) }}" aria-label="Назад к тендеру">
+        <a class="back" href="{{ $page['back'] }}" aria-label="Назад">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
         </a>
         <div>
@@ -20,8 +20,8 @@
 
 @section('content')
     <section class="card">
-        <h2 style="line-height:1.35;font-size:15px">{{ $contract->subject }}</h2>
-        <p class="muted">{{ $contract->region->name }} · {{ $contract->company->name }}</p>
+        <h2 style="line-height:1.35;font-size:15px">{{ $page['title'] }}</h2>
+        <p class="muted">{{ $page['subtitle'] }}</p>
 
         @if ($report === null || $report->normativeFiles === 0)
             <p class="muted">Сметы заказчика в документации нет — выбирать не из чего. Лоток по проекту (без цен) — следующий этап.</p>
@@ -39,7 +39,7 @@
         @endif
 
         @if ($report !== null && $report->filesToReread > 0)
-            <form method="post" action="{{ route('estimates.materials.reread', $contract) }}" class="row">
+            <form method="post" action="{{ $page['reread'] }}" class="row">
                 @csrf
                 <p class="muted" style="margin:0">Смет, прочитанных до выборки материалов: {{ $report->filesToReread }}.</p>
                 <button class="button secondary small" type="submit">Перечитать сметы</button>

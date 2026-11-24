@@ -35,8 +35,8 @@ class EstimateExporter
         $sheet = $book->getActiveSheet();
         $sheet->setTitle('Смета');
 
-        $contract = $estimate->contract;
-        $sheet->setCellValue('A1', 'Быстрая смета: '.$contract->subject);
+        $regionCode = $estimate->regionCode();
+        $sheet->setCellValue('A1', 'Быстрая смета: '.$estimate->title());
         $sheet->setCellValue('A2', 'Только работы: по нормативам ГЭСН и ставкам труда региона (ФГИС ЦС) с НР и СП, без машин; где нормы нет — по цене прайса. Материалы отдельно. Для себя, не для отправки.');
 
         $headers = ['№', 'Наименование (из сметы заказчика)', 'Ед.', 'Кол-во', 'Наша позиция прайса', 'Цена работы, ₽ (ГЭСН по региону или вручную)', 'Работа, ₽'];
@@ -45,7 +45,7 @@ class EstimateExporter
         $row = 5;
         foreach ($lines as $index => $line) {
             $skip = $line->match === LineMatch::Skip;
-            $price = $skip || $line->priceItem === null ? null : $this->prices->unitPrice($line->priceItem, $contract->region_code);
+            $price = $skip || $line->priceItem === null ? null : $this->prices->unitPrice($line->priceItem, $regionCode);
 
             $sheet->setCellValue('A'.$row, $index + 1);
             $sheet->setCellValue('B'.$row, $line->name);
@@ -69,10 +69,11 @@ class EstimateExporter
         $sheet->setCellValue('G'.$row, $last >= 5 ? '=SUM(G5:G'.$last.')' : 0);
         $sheet->setCellValue('B'.($row + 1), 'Работы по сметам заказчика (нормативы, без материалов и НДС)');
         $sheet->setCellValue('G'.($row + 1), $normative / 100);
-        $sheet->setCellValue('B'.($row + 2), 'Итого работы');
-        $sheet->setCellValue('G'.($row + 2), '=G'.$row.'+G'.($row + 1));
+        // Если есть смета заказчика, позиции — её же работы по нашему прайсу: не складываем, берём смету.
+        $sheet->setCellValue('B'.($row + 2), 'Итого работы (по смете заказчика, если она есть)');
+        $sheet->setCellValue('G'.($row + 2), '=IF(G'.($row + 1).'>0,G'.($row + 1).',G'.$row.')');
         $sheet->setCellValue('B'.($row + 3), 'Сумма контракта (с материалами)');
-        $sheet->setCellValue('G'.($row + 3), $contract->amount_kopecks / 100);
+        $sheet->setCellValue('G'.($row + 3), ($estimate->contract?->amount_kopecks ?? 0) / 100);
         $sheet->setCellValue('B'.($row + 4), 'Работы от суммы контракта');
         $sheet->setCellValue('G'.($row + 4), '=IF(G'.($row + 3).'=0,0,G'.($row + 2).'/G'.($row + 3).')');
 

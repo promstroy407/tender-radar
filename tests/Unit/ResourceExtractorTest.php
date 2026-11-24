@@ -24,7 +24,7 @@ class ResourceExtractorTest extends TestCase
         // Второй лист — ведомость ресурсов с теми же строками: не дублируем.
         $tables = [$rows, $rows];
 
-        $found = (new ResourceExtractor(new NumberParser, new UnitNormalizer))->extract($tables);
+        $found = (new ResourceExtractor(new NumberParser, new UnitNormalizer))->materials($tables);
 
         $this->assertCount(3, $found);
         $this->assertSame('Короб кабельный (кабель-канал) ПВХ с крышкой, размеры 60х40 мм', $found[0]->name);
