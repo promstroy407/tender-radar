@@ -11,6 +11,7 @@ use App\Models\Contract;
 use App\Models\Estimate;
 use App\Models\EstimateFile;
 use App\Models\EstimateLine;
+use App\Models\EstimateMaterial;
 use App\Models\PriceItem;
 use App\Models\User;
 use App\Services\Estimates\PriceMatcher;
@@ -19,6 +20,7 @@ use Database\Seeders\PriceItemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -88,6 +90,57 @@ class EstimateTest extends TestCase
 
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id)
             ->assertSee("989\u{00A0}896,38\u{00A0}₽");
+    }
+
+    public function test_tray_and_fittings_are_taken_from_customer_estimate(): void
+    {
+        $contract = Contract::factory()->create(['amount_kopecks' => 300_000_000]);
+
+        $this->actingAs($this->admin())->post('/tenders/'.$contract->id.'/estimate/files', ['files' => [$this->xlsx([
+            ['№ п/п', 'Обоснование', 'Наименование работ и затрат', 'Ед. изм.', 'Количество'],
+            ['1', 'ГЭСНм08-02-394-01', 'Лотки металлические шириной до 200 мм', '100 м', 0.3],
+            ['2', '21.1.08.03-0573', 'Лоток перфорированный 200х50 мм', 'м', 30, 450.5, 13515],
+            ['3', 'ТЦ_08.3.05.02_77_0000000000_26.03.2026_02_1.1', 'Крышка лотка 200 мм Ценообразование: 300/1,22*1,04=255,74', 'м', 30, 255.74, 7672.2],
+            ['4', '08.1.02.11-0001', 'Кронштейн настенный 200 мм', '10 шт', 1.5, 1200, 1800],
+            ['5', '01.7.15.03-0042', 'Стяжка металлическая 4,6х200', '100 шт', 2, 150, 300],
+            ['6', 'ТЦ_61.2.04.07_77', 'Извещатель пожарный дымовой', 'шт', 10, 1500, 15000],
+            [null, null, 'ВСЕГО по смете', 100000.0, null, 'ВСЕГО по смете'],
+            [null, null, 'Всего - МР', 38287.2, null, 'Всего - МР'],
+        ])]]);
+
+        $this->assertSame(5, EstimateMaterial::query()->count());
+
+        $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/materials')
+            ->assertOk()
+            ->assertSeeInOrder([
+                'Лоток перфорированный', "13\u{00A0}515\u{00A0}₽", "30 м × 450,50\u{00A0}₽",
+                'Комплектующие лотка', 'Крышка лотка 200 мм', 'Кронштейн настенный 200 мм', '15 шт',
+                'Стяжки металлические', '200 шт',
+            ])
+            ->assertDontSee('Извещатель пожарный дымовой')
+            ->assertDontSee('Ценообразование')
+            // 13 515 + 7 672,20 + 1 800 + 300 = 23 287,20 ₽; с извещателями — 38 287,20 ₽ = итог МР.
+            ->assertSee("23\u{00A0}287,20\u{00A0}₽")
+            ->assertSee("38\u{00A0}287,20\u{00A0}₽")
+            ->assertSee('100,0 %');
+
+        $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/estimate')->assertSee('Лоток и комплектующие по смете заказчика');
+        $this->actingAs(User::factory()->create())->get('/tenders/'.$contract->id.'/materials')->assertForbidden();
+    }
+
+    public function test_estimate_read_before_materials_can_be_reread(): void
+    {
+        Queue::fake();
+        $file = EstimateFile::factory()->create(['norm_total_kopecks' => 100_000, 'norm_materials_kopecks' => 10_000, 'original_name' => 'smeta.xlsx']);
+        $contract = $file->estimate->contract;
+
+        $this->actingAs($this->admin())->get('/tenders/'.$contract->id.'/materials')
+            ->assertOk()
+            ->assertSee('Перечитать сметы');
+
+        $this->actingAs($this->admin())->post('/tenders/'.$contract->id.'/materials/reread')
+            ->assertRedirect('/tenders/'.$contract->id.'/materials');
+        Queue::assertPushed(ParseEstimateFile::class, 1);
     }
 
     public function test_excel_estimate_is_read_matched_and_summed(): void

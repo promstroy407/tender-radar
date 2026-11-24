@@ -10,6 +10,7 @@ use App\Http\Controllers\EisSettingsController;
 use App\Http\Controllers\EstimateController;
 use App\Http\Controllers\FunnelController;
 use App\Http\Controllers\KpTemplateController;
+use App\Http\Controllers\MaterialsController;
 use App\Http\Controllers\OfferController;
 use App\Http\Controllers\PriceController;
 use App\Http\Controllers\SearchSettingsController;
@@ -53,6 +54,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('tenders/{contract}/documents/estimate', [ContractDocumentsController::class, 'toEstimate'])->name('tenders.documents.estimate');
         Route::post('tenders/{contract}/estimate/files', [EstimateController::class, 'upload'])->name('estimates.upload');
         Route::get('tenders/{contract}/estimate/export', [EstimateController::class, 'export'])->name('estimates.export');
+        Route::get('tenders/{contract}/materials', [MaterialsController::class, 'show'])->name('estimates.materials');
+        Route::post('tenders/{contract}/materials/reread', [MaterialsController::class, 'reread'])->name('estimates.materials.reread');
         Route::post('estimate-files/{file}/reparse', [EstimateController::class, 'reparse'])->name('estimates.files.reparse');
         Route::get('estimate-files/{file}/text', [EstimateController::class, 'text'])->name('estimates.files.text');
         Route::delete('estimate-files/{file}', [EstimateController::class, 'destroyFile'])->name('estimates.files.destroy');

@@ -43,6 +43,14 @@ class EstimateFile extends Model
     }
 
     /**
+     * @return HasMany<EstimateMaterial, $this>
+     */
+    public function materials(): HasMany
+    {
+        return $this->hasMany(EstimateMaterial::class);
+    }
+
+    /**
      * @return HasMany<EstimateLine, $this>
      */
     public function lines(): HasMany

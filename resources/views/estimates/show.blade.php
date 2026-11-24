@@ -29,6 +29,7 @@
             @endif
             @if ($summary->fromCustomerEstimate())
                 <p class="muted">Взято из сметы заказчика: итог без материалов, оборудования и НДС.@if ($summary->priceListKopecks > 0) Для сравнения, по нашему прайсу посчитано {{ $summary->linesPriced }} из {{ $summary->linesTotal - $summary->linesSkipped }} позиций проекта — {{ $money->format($summary->priceListKopecks) }}.@endif</p>
+                <p><a href="{{ route('estimates.materials', $contract) }}" style="font-size:13px;font-weight:600">Лоток и комплектующие по смете заказчика →</a></p>
             @else
                 <p class="muted">Посчитано по проекту и ведомостям: {{ $summary->linesPriced }} работ по нормам ГЭСН и ставкам региона «{{ $contract->region->name }}», с накладными и прибылью, без материалов.</p>
             @endif

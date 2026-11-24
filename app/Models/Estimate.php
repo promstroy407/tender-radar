@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Contract $contract
  * @property-read Collection<int, EstimateFile> $files
  * @property-read Collection<int, EstimateLine> $lines
+ * @property-read Collection<int, EstimateMaterial> $materials
  */
 #[Fillable(['contract_id', 'user_id'])]
 class Estimate extends Model
@@ -34,6 +35,16 @@ class Estimate extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    /**
+     * Материалы и оборудование из смет заказчика.
+     *
+     * @return HasMany<EstimateMaterial, $this>
+     */
+    public function materials(): HasMany
+    {
+        return $this->hasMany(EstimateMaterial::class);
     }
 
     /**

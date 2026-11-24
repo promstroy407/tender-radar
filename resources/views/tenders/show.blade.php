@@ -83,6 +83,9 @@
             @foreach (array_slice($estimateSummary->sections, 0, 4) as $row)
                 <div class="between" style="font-size:14px"><span>{{ $row['section']->label() }}</span><span>{{ $money->format($row['kopecks']) }}</span></div>
             @endforeach
+            @if ($estimateSummary->fromCustomerEstimate())
+                <a href="{{ route('estimates.materials', $contract) }}" style="font-size:13px;font-weight:600">Лоток и комплектующие по смете →</a>
+            @endif
         @elseif ($contract->estimate)
             <p class="muted">Документация читается — просчёт появится через пару минут. Если не появится — в документации нет читаемой сметы, ведомости или проекта (сканы — следующий этап).</p>
             <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">Что прочиталось →</a>

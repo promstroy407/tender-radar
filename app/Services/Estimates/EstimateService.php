@@ -75,6 +75,23 @@ class EstimateService
     }
 
     /**
+     * Перечитать сметы заказчика, прочитанные до выборки материалов (Excel и CSV — быстро).
+     * Возвращает, сколько файлов поставлено в очередь.
+     */
+    public function rereadForMaterials(Estimate $estimate): int
+    {
+        $count = 0;
+        foreach ($estimate->files as $file) {
+            if ($file->norm_total_kopecks !== null && $file->extension() !== 'pdf' && ! $file->materials()->exists()) {
+                $this->reparse($file);
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Содержимое файла строками, колонки через « | », как его видит разбор.
      */
     public function text(EstimateFile $file): string
