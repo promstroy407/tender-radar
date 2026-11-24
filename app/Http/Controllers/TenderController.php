@@ -8,6 +8,7 @@ use App\Enums\ContractFilter;
 use App\Http\Requests\ContractIndexRequest;
 use App\Models\Contract;
 use App\Services\ContractService;
+use App\Services\Eis\ContractDocumentsService;
 use App\Services\EisLinkBuilder;
 use App\Services\Estimates\EstimateCalculator;
 use App\Services\KpTemplateService;
@@ -29,6 +30,7 @@ class TenderController extends Controller
         private readonly OfferSender $sender,
         private readonly MoneyFormatter $money,
         private readonly EstimateCalculator $calculator,
+        private readonly ContractDocumentsService $documents,
     ) {}
 
     public function index(ContractIndexRequest $request): View
@@ -48,6 +50,11 @@ class TenderController extends Controller
     {
         $contract->load(['company', 'region', 'offer', 'deal', 'estimate', 'documents']);
         $rendered = $this->template->render($contract);
+        $documents = $this->documents->split($contract);
+        $kindLabels = [];
+        foreach ($documents['useful'] as $document) {
+            $kindLabels[$document->id] = $this->documents->kind($document)->label();
+        }
 
         return view('tenders.show', [
             'contract' => $contract,
@@ -57,6 +64,8 @@ class TenderController extends Controller
             'telegramUrl' => $this->messengers->telegram($contract->company->phone),
             'mailReady' => $this->sender->mailConfigured(),
             'money' => $this->money,
+            'documents' => $documents,
+            'kindLabels' => $kindLabels,
             'estimateSummary' => $contract->estimate === null ? null
                 : $this->calculator->summarize($contract->estimate, $contract->estimate->lines()->with('priceItem')->get()),
         ]);

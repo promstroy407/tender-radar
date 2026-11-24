@@ -121,7 +121,7 @@ class EstimateTest extends TestCase
             ->assertSee("11\u{00A0}500\u{00A0}₽")
             ->assertDontSee("74\u{00A0}000,50")
             ->assertSee('11,5 %')
-            ->assertSee('не сопоставлено 1');
+            ->assertSee('Не посчитано позиций: 1');
 
         $this->actingAs($this->admin())->get('/tenders/'.$contract->id)
             ->assertOk()

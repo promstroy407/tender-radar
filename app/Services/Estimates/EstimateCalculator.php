@@ -19,6 +19,9 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class EstimateCalculator
 {
+    /** Сколько самых дорогих работ показывать в просчёте. */
+    private const TOP_LINES = 15;
+
     public function __construct(
         private readonly PriceResolver $prices,
     ) {}
@@ -29,6 +32,8 @@ class EstimateCalculator
     public function summarize(Estimate $estimate, Collection $lines): EstimateSummary
     {
         $work = $priced = $unmatched = $noPrice = $skipped = 0;
+        $bySection = [];
+        $top = [];
 
         foreach ($lines as $line) {
             if ($line->match === LineMatch::Skip) {
@@ -47,6 +52,12 @@ class EstimateCalculator
             } else {
                 $priced++;
                 $work += $lineWork;
+
+                $section = $line->priceItem->section;
+                $bySection[$section->value] ??= ['section' => $section, 'kopecks' => 0, 'lines' => 0];
+                $bySection[$section->value]['kopecks'] += $lineWork;
+                $bySection[$section->value]['lines']++;
+                $top[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'kopecks' => $lineWork];
             }
         }
 
@@ -70,6 +81,21 @@ class EstimateCalculator
             linesUnmatched: $unmatched,
             linesNoPrice: $noPrice,
             linesSkipped: $skipped,
+            sections: $this->sortByKopecks(array_values($bySection)),
+            topLines: array_slice($this->sortByKopecks($top), 0, self::TOP_LINES),
         );
+    }
+
+    /**
+     * @template T of array{kopecks: int}
+     *
+     * @param  list<T>  $rows
+     * @return list<T>
+     */
+    private function sortByKopecks(array $rows): array
+    {
+        usort($rows, fn (array $a, array $b): int => $b['kopecks'] <=> $a['kopecks']);
+
+        return $rows;
     }
 }

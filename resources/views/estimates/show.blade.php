@@ -8,107 +8,125 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
         </a>
         <div>
-            <h1 style="font-size:17px;font-weight:600">Быстрая смета</h1>
-            <p class="sub" style="font-size:12px">Для себя: только работы по нашему прайсу</p>
+            <h1 style="font-size:17px;font-weight:600">Наш просчёт</h1>
+            <p class="sub" style="font-size:12px">Для себя: только работы, без материалов</p>
         </div>
     </div>
 @endsection
 
 @section('content')
     <section class="card">
-        <h2 style="line-height:1.35">{{ $contract->subject }}</h2>
+        <h2 style="line-height:1.35;font-size:15px">{{ $contract->subject }}</h2>
         <p class="muted">{{ $contract->region->name }} · {{ $contract->company->name }}</p>
 
         @if ($summary && $summary->hasData())
             <div class="grid2">
-                <div class="kv"><span class="label">Работы</span><b style="font-size:17px">{{ $money->format($summary->workKopecks()) }}</b></div>
+                <div class="kv"><span class="label">Работы — наш просчёт</span><b style="font-size:20px">{{ $money->format($summary->workKopecks()) }}</b></div>
                 <div class="kv"><span class="label">Сумма контракта</span><b>{{ $money->format($summary->contractKopecks) }}</b></div>
             </div>
             @if ($summary->shareLabel())
-                <p class="muted" style="color:var(--ink2)">Работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в ней есть и материалы).</p>
+                <p class="muted" style="color:var(--ink2)">Работы — <b>{{ $summary->shareLabel() }}</b> от суммы контракта (в контракте ещё материалы и оборудование).</p>
             @endif
-            @if ($summary->normativeFiles > 0)
-                <p class="muted">По нормативам из сметы заказчика: <b style="color:var(--ink)">{{ $money->format($summary->normativeKopecks) }}</b> — оплата труда, машины, накладные расходы и сметная прибыль, без материалов, оборудования и НДС.</p>
+            @if ($summary->fromCustomerEstimate())
+                <p class="muted">Взято из сметы заказчика: итог без материалов, оборудования и НДС.@if ($summary->priceListKopecks > 0) Для сравнения, по проекту и ведомостям — {{ $money->format($summary->priceListKopecks) }}.@endif</p>
+            @else
+                <p class="muted">Посчитано по проекту и ведомостям: {{ $summary->linesPriced }} работ по нормам ГЭСН и ставкам региона «{{ $contract->region->name }}», с накладными и прибылью, без материалов.</p>
             @endif
-            @if ($summary->linesTotal > 0)
-                <p class="muted">
-                    Позиции ведомостей: {{ $summary->linesTotal }} · посчитано по прайсу {{ $summary->linesPriced }} ({{ $money->format($summary->priceListKopecks) }})
-                    @if ($summary->linesUnmatched) · <b style="color:var(--hot)">не сопоставлено {{ $summary->linesUnmatched }}</b>@endif
-                    @if ($summary->linesNoPrice) · <b style="color:var(--hot)">без цены {{ $summary->linesNoPrice }}</b>@endif
-                    @if ($summary->linesSkipped) · не считаем {{ $summary->linesSkipped }}@endif
-                </p>
-                <p class="muted" style="font-size:12px">Позиции ведомостей считаются по нормам ГЭСН и ставкам труда региона «{{ $contract->region->name }}» (ФГИС ЦС) с накладными расходами и сметной прибылью, без машин и материалов. Где у работы нет нормы — по цене из «Прайса работ».</p>
+            @if ($summary->linesUnmatched + $summary->linesNoPrice > 0)
+                <p class="muted" style="color:var(--hotink)">Не посчитано позиций: {{ $summary->linesUnmatched + $summary->linesNoPrice }} — работ, которых нет в нашем прайсе. Список — ниже, в «Все позиции».</p>
             @endif
-            <p class="muted" style="font-size:12px">Материалы не считаем — они отдельно. Это прикидка, не смета для отправки.</p>
-            <div class="row">
-                <a class="button secondary" href="{{ route('estimates.export', $contract) }}">Скачать в Excel</a>
-                <a class="button secondary" href="{{ route('prices') }}">Прайс работ</a>
-            </div>
+        @elseif ($pending)
+            <p class="muted">Документация читается — просчёт появится через минуту-две.</p>
         @else
-            <p class="muted">Загрузите документацию тендера: смету заказчика (Excel), ведомость работ или ZIP-архив. Из нормативной сметы приложение возьмёт стоимость работ без материалов.</p>
+            <p class="muted">Просчёта пока нет: в документации не нашлось сметы, ведомости или проекта, которые читаются (Excel, CSV, PDF с текстом). Сканы и чертежи — следующий этап.</p>
         @endif
     </section>
 
-    <form method="post" action="{{ route('estimates.upload', $contract) }}" enctype="multipart/form-data" class="card">
-        @csrf
-        <h2 class="section-title">Файлы документации</h2>
-        <label>Добавить файлы (до 20 за раз, до 64 МБ каждый)
-            <input type="file" name="files[]" multiple required
-                   accept=".xlsx,.xls,.xlsm,.ods,.csv,.pdf,.zip,.rar,.7z,.gsfx,.gsf,.xml,.doc,.docx,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff">
-        </label>
-        @error('files') <p class="error">{{ $message }}</p> @enderror
-        @error('files.*') <p class="error">{{ $message }}</p> @enderror
-        <button type="submit">Загрузить и посчитать</button>
-        <p class="muted" style="font-size:12px">Читаются Excel, CSV и текстовые PDF. ГРАНД-Смету выгрузите в Excel. Чертежи и сканы — следующий этап.</p>
-
-        @if ($estimate && $estimate->files->isNotEmpty())
-            <div style="display:flex;flex-direction:column;gap:8px">
-                @foreach ($estimate->files as $file)
-                    <div style="border-top:1px solid var(--chip);padding-top:8px;display:flex;flex-direction:column;gap:6px">
-                        <div class="between">
-                            <span style="font-size:14px;word-break:break-word">{{ $file->original_name }}</span>
-                            <span class="badge {{ $file->status->value === 'parsed' ? 'on' : ($file->status->value === 'failed' ? 'deal' : 'off') }}" style="flex:none">{{ $file->status->label() }}</span>
-                        </div>
-                        @if ($file->error)
-                            <p class="muted" style="color:var(--hotink)">{{ $file->error }}</p>
-                        @endif
-                        @if ($totals = $file->normativeTotals())
-                            <p class="muted">Нормативная смета: итог {{ $money->format($totals->totalKopecks) }}, материалы {{ $money->format($totals->materialsKopecks) }}@if ($totals->equipmentKopecks), оборудование {{ $money->format($totals->equipmentKopecks) }}@endif → <b style="color:var(--ink)">работы {{ $money->format($totals->worksKopecks()) }}</b></p>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        @endif
-    </form>
-
-    @if ($estimate && $estimate->files->isNotEmpty())
+    @if ($summary && $summary->sections !== [])
         <section class="card">
-            <h2 class="section-title">Управление файлами</h2>
-            @foreach ($estimate->files as $file)
-                <div class="between" style="gap:6px">
-                    <span class="muted" style="word-break:break-word">{{ \Illuminate\Support\Str::limit($file->original_name, 50) }}</span>
-                    <div class="row" style="flex:none">
-                        @if ($file->path !== '' && $file->extension() === 'pdf')
-                            <a class="button secondary" href="{{ route('estimates.files.text', $file) }}" target="_blank" style="min-height:36px;padding:0 10px;font-size:12px">Текст</a>
-                        @endif
-                        @if ($file->path !== '')
-                            <form method="post" action="{{ route('estimates.files.reparse', $file) }}">
-                                @csrf
-                                <button type="submit" class="secondary" style="min-height:36px;padding:0 10px;font-size:12px">Прочитать заново</button>
-                            </form>
-                        @endif
-                        <form method="post" action="{{ route('estimates.files.destroy', $file) }}">
-                            @csrf
-                            @method('delete')
-                            <button type="submit" class="secondary" style="min-height:36px;padding:0 10px;font-size:12px">Удалить</button>
-                        </form>
-                    </div>
+            <h3 class="section-title">По разделам</h3>
+            @php($maxSection = max(array_map(fn (array $row): int => $row['kopecks'], $summary->sections)))
+            @foreach ($summary->sections as $row)
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <div class="between"><span>{{ $row['section']->label() }} <span class="muted">· {{ $row['lines'] }} поз.</span></span><b>{{ $money->format($row['kopecks']) }}</b></div>
+                    <div class="bar"><i style="width:{{ $maxSection > 0 ? intdiv($row['kopecks'] * 100, $maxSection) : 0 }}%"></i></div>
                 </div>
             @endforeach
         </section>
     @endif
 
+    @if ($summary && $summary->topLines !== [])
+        <section class="card">
+            <h3 class="section-title">Основные работы</h3>
+            <ul class="work-list">
+                @foreach ($summary->topLines as $row)
+                    <li>
+                        <span class="work-name">{{ $row['name'] }}</span>
+                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}</span><b style="color:var(--ink)">{{ $money->format($row['kopecks']) }}</b></span>
+                    </li>
+                @endforeach
+            </ul>
+            <p class="muted" style="font-size:12px">Это прикидка для себя, не смета для отправки. Материалы считаются отдельно.</p>
+        </section>
+    @endif
+
+    <details class="card" @if (! $estimate || $estimate->files->isEmpty()) open @endif>
+        <summary>Файлы документации ({{ $estimate?->files->count() ?? 0 }})</summary>
+        @if ($estimate && $estimate->files->isNotEmpty())
+            <div style="display:flex;flex-direction:column;gap:10px">
+                @foreach ($estimate->files as $file)
+                    <div style="border-top:1px solid var(--chip);padding-top:8px;display:flex;flex-direction:column;gap:6px">
+                        <div class="between">
+                            <span style="font-size:13px;word-break:break-word">{{ $file->original_name }}</span>
+                            <span class="badge {{ $file->status->value === 'parsed' ? 'on' : ($file->status->value === 'failed' ? 'deal' : 'off') }}" style="flex:none">{{ $file->status->label() }}</span>
+                        </div>
+                        @if ($file->error)
+                            <p class="muted" style="color:var(--hotink);font-size:12px">{{ $file->error }}</p>
+                        @endif
+                        @if ($totals = $file->normativeTotals())
+                            <p class="muted" style="font-size:12px">Смета заказчика: итог {{ $money->format($totals->totalKopecks) }}, материалы {{ $money->format($totals->materialsKopecks) }}@if ($totals->equipmentKopecks), оборудование {{ $money->format($totals->equipmentKopecks) }}@endif → <b style="color:var(--ink)">работы {{ $money->format($totals->worksKopecks()) }}</b></p>
+                        @endif
+                        <div class="row">
+                            @if ($file->path !== '' && $file->extension() === 'pdf')
+                                <a class="button secondary small" href="{{ route('estimates.files.text', $file) }}" target="_blank">Текст</a>
+                            @endif
+                            @if ($file->path !== '')
+                                <form method="post" action="{{ route('estimates.files.reparse', $file) }}">
+                                    @csrf
+                                    <button type="submit" class="secondary small">Прочитать заново</button>
+                                </form>
+                            @endif
+                            <form method="post" action="{{ route('estimates.files.destroy', $file) }}">
+                                @csrf
+                                @method('delete')
+                                <button type="submit" class="secondary small">Удалить</button>
+                            </form>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        <form method="post" action="{{ route('estimates.upload', $contract) }}" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+            @csrf
+            <label>Добавить свои файлы (до 20 за раз, до 64 МБ каждый)
+                <input type="file" name="files[]" multiple required
+                       accept=".xlsx,.xls,.xlsm,.ods,.csv,.pdf,.zip,.rar,.7z,.gsfx,.gsf,.xml,.doc,.docx,.dwg,.dxf,.jpg,.jpeg,.png,.tif,.tiff">
+            </label>
+            @error('files') <p class="error">{{ $message }}</p> @enderror
+            @error('files.*') <p class="error">{{ $message }}</p> @enderror
+            <button type="submit" class="secondary">Загрузить и посчитать</button>
+            <p class="muted" style="font-size:12px">Читаются Excel, CSV и PDF с текстом. ГРАНД-Смету выгрузите в Excel. Сканы и чертежи — следующий этап.</p>
+        </form>
+        <div class="row" style="margin-top:8px">
+            <a class="button secondary small" href="{{ route('estimates.export', $contract) }}">Скачать в Excel</a>
+            <a class="button secondary small" href="{{ route('prices') }}">Прайс работ</a>
+        </div>
+    </details>
+
     @if ($lines && ($lines->total() > 0 || $attention))
+        <details class="card" @if ($attention || request()->has('page')) open @endif>
+        <summary>Все позиции и ручная правка ({{ $summary?->linesTotal ?? 0 }})</summary>
         <nav class="chips" style="margin:0" aria-label="Позиции">
             <a class="chip {{ $attention ? '' : 'active' }}" href="{{ route('estimates.show', $contract) }}">Все позиции</a>
             <a class="chip {{ $attention ? 'active' : '' }}" href="{{ route('estimates.show', ['contract' => $contract, 'filter' => 'attention']) }}">Требуют внимания</a>
@@ -168,6 +186,7 @@
                 @if ($lines->nextPageUrl())<a class="button secondary" href="{{ $lines->nextPageUrl() }}">Дальше →</a>@endif
             </div>
         @endif
+        </details>
     @endif
 @endsection
 

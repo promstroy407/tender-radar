@@ -35,9 +35,10 @@ class EstimateService
         private readonly DocumentReader $reader,
     ) {}
 
-    public function forContract(Contract $contract, User $user): Estimate
+    /** Смета тендера; автор — тот, кто начал, или никто, если её начал сервер сам. */
+    public function forContract(Contract $contract, ?User $user): Estimate
     {
-        return Estimate::query()->firstOrCreate(['contract_id' => $contract->id], ['user_id' => $user->id]);
+        return Estimate::query()->firstOrCreate(['contract_id' => $contract->id], ['user_id' => $user?->id]);
     }
 
     /**

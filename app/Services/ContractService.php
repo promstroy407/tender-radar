@@ -51,6 +51,14 @@ class ContractService
             ->first();
     }
 
+    /** Попадает ли контракт в ленту: регион включён и сумма не ниже порога региона. */
+    public function isInFeed(Contract $contract): bool
+    {
+        $region = $contract->region;
+
+        return $region->is_enabled && $contract->amount_kopecks >= $region->min_amount_kopecks;
+    }
+
     /**
      * @return Builder<Contract>
      */

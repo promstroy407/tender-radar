@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Eis;
 
 use App\Data\Eis\DocumentsToEstimateResult;
+use App\Enums\DocumentKind;
 use App\Models\Contract;
 use App\Models\ContractDocument;
 use App\Models\User;
@@ -31,7 +32,36 @@ class ContractDocumentsService
         private readonly NoticeDocumentsParser $parser,
         private readonly EstimateService $estimates,
         private readonly ConnectionInterface $db,
+        private readonly DocumentKindClassifier $kinds,
     ) {}
+
+    public function kind(ContractDocument $document): DocumentKind
+    {
+        return $this->kinds->classify($document->name, $document->description);
+    }
+
+    /**
+     * Файлы для просчёта (смета, ведомость, проект) и прочие — отдельно.
+     *
+     * @return array{useful: list<ContractDocument>, other: list<ContractDocument>}
+     */
+    public function split(Contract $contract): array
+    {
+        $useful = $other = [];
+        foreach ($contract->documents as $document) {
+            if ($this->kind($document)->isUseful()) {
+                $useful[] = $document;
+            } else {
+                $other[] = $document;
+            }
+        }
+
+        // Сначала сметы, потом ведомости, потом проект.
+        $order = [DocumentKind::Estimate->value => 0, DocumentKind::WorksList->value => 1, DocumentKind::Project->value => 2];
+        usort($useful, fn (ContractDocument $a, ContractDocument $b): int => [$order[$this->kind($a)->value] ?? 3, $a->name] <=> [$order[$this->kind($b)->value] ?? 3, $b->name]);
+
+        return ['useful' => $useful, 'other' => $other];
+    }
 
     /** Находит извещение и сохраняет список файлов документации. Возвращает их число. */
     public function fetch(Contract $contract): int
@@ -66,8 +96,8 @@ class ContractDocumentsService
         return count($documents);
     }
 
-    /** Скачивает файлы документации и добавляет их в смету тендера (разбор — в фоне). */
-    public function loadIntoEstimate(Contract $contract, User $user): DocumentsToEstimateResult
+    /** Скачивает сметы, ведомости и проект в смету тендера (разбор — в фоне). */
+    public function loadIntoEstimate(Contract $contract, ?User $user): DocumentsToEstimateResult
     {
         $estimate = $this->estimates->forContract($contract, $user);
         $loaded = 0;
@@ -76,8 +106,9 @@ class ContractDocumentsService
 
         /** @var ContractDocument $document */
         foreach ($contract->documents()->get() as $document) {
+            // Бумаги закупки (проект контракта, требования, реквизиты) для просчёта не нужны.
             // Повторное нажатие не добавляет те же файлы (архив лежит как «архив → файл»).
-            if ($this->alreadyLoaded($document->name, $present)) {
+            if (! $this->kind($document)->isUseful() || $this->alreadyLoaded($document->name, $present)) {
                 continue;
             }
 

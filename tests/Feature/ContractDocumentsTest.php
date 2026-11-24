@@ -12,9 +12,11 @@ use App\Models\Contract;
 use App\Models\ContractDocument;
 use App\Models\EstimateFile;
 use App\Models\User;
+use App\Services\ContractService;
 use App\Services\Eis\ContractDocumentsService;
 use App\Services\SettingsService;
 use App\Services\Sleeper;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -88,6 +90,34 @@ class ContractDocumentsTest extends TestCase
         $this->assertNotNull($contract->refresh()->documents_checked_at);
     }
 
+    public function test_feed_tender_is_counted_automatically_after_fetch(): void
+    {
+        Queue::fake([LoadDocumentsIntoEstimate::class]);
+        $contract = Contract::factory()->create(['notification_number' => self::NOTICE, 'amount_kopecks' => 500_000_000]);
+        $this->fakeNotice($this->notice([
+            ['Смета ЭОМ.xlsx', 'https://zakupki.example.test/file?uid=1', '15360', null],
+            ['Проект контракта.doc', 'https://zakupki.example.test/file?uid=2', '100', null],
+        ]));
+
+        $this->runFetch($contract);
+
+        Queue::assertPushedOn('documents', LoadDocumentsIntoEstimate::class, fn (LoadDocumentsIntoEstimate $job): bool => $job->contractId === $contract->id && $job->userId === null);
+    }
+
+    public function test_no_auto_count_below_threshold_or_without_useful_files(): void
+    {
+        Queue::fake([LoadDocumentsIntoEstimate::class]);
+        $cheap = Contract::factory()->create(['notification_number' => self::NOTICE, 'amount_kopecks' => 100]);
+        $paperOnly = Contract::factory()->create(['notification_number' => self::NOTICE, 'amount_kopecks' => 500_000_000]);
+        $this->fakeNotice($this->notice([['Смета ЭОМ.xlsx', 'https://zakupki.example.test/file?uid=1', '15360', null]]));
+        $this->runFetch($cheap);
+
+        $this->fakeNotice($this->notice([['Проект контракта.doc', 'https://zakupki.example.test/file?uid=2', '100', null]]));
+        $this->runFetch($paperOnly);
+
+        Queue::assertNotPushed(LoadDocumentsIntoEstimate::class);
+    }
+
     public function test_card_shows_documents_and_buttons(): void
     {
         $admin = User::factory()->admin()->create();
@@ -95,18 +125,20 @@ class ContractDocumentsTest extends TestCase
 
         $this->actingAs($admin)->get('/tenders/'.$contract->id)
             ->assertOk()
-            ->assertSee('Документация закупки')
+            ->assertSee('Наш просчёт')
             ->assertSee('Найти документацию');
 
         ContractDocument::query()->create([
             'contract_id' => $contract->id, 'name' => 'Смета ЭОМ.xlsx', 'url' => 'https://zakupki.example.test/file?uid=1', 'size_bytes' => 2_621_440,
         ]);
+        ContractDocument::query()->create([
+            'contract_id' => $contract->id, 'name' => 'Проект контракта.doc', 'url' => 'https://zakupki.example.test/file?uid=2',
+        ]);
 
         $this->actingAs($admin)->get('/tenders/'.$contract->id)
             ->assertOk()
-            ->assertSee('Смета ЭОМ.xlsx')
-            ->assertSee('2,5 МБ')
-            ->assertSee('Загрузить в смету и посчитать');
+            ->assertSeeInOrder(['Смета', 'Смета ЭОМ.xlsx', '2,5 МБ', 'Прочие файлы закупки (1)', 'Проект контракта.doc'])
+            ->assertSee('Посчитать');
     }
 
     public function test_buttons_queue_jobs_and_are_admin_only(): void
@@ -159,6 +191,16 @@ class ContractDocumentsTest extends TestCase
         Queue::assertPushed(ParseEstimateFile::class, 1);
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('individualPerson_token', self::TOKEN));
         Http::assertSentCount(1);
+    }
+
+    private function runFetch(Contract $contract): void
+    {
+        (new FetchContractDocuments($contract->id))->handle(
+            $this->app->make(ContractDocumentsService::class),
+            $this->app->make(ContractService::class),
+            $this->app->make(Dispatcher::class),
+            new NullLogger,
+        );
     }
 
     /**

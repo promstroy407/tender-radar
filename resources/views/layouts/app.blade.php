@@ -63,6 +63,11 @@
         .status-grid button[aria-pressed=true] { background:var(--ink); color:#fff; border-color:var(--ink); }
         .scroll-x { display:flex; gap:8px; overflow-x:auto; margin:0 -20px; padding:0 20px 2px; scrollbar-width:none; }
         .scroll-x .stat { flex:none; min-width:96px; padding:0 8px; }
+        ul.work-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+        ul.work-list li { display:flex; flex-direction:column; gap:2px; border-bottom:1px solid var(--chip); padding-bottom:8px; }
+        .work-name { font-size:14px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+        button.small, .button.small { min-height:34px; padding:0 10px; font-size:12px; }
+        details.card > summary { cursor:pointer; font-weight:600; min-height:28px; }
         ul.docs { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; font-size:14px; word-break:break-word; }
         table.report { width:100%; border-collapse:collapse; font-size:13px; }
         table.report th { text-align:left; font-weight:600; color:var(--muted); font-size:12px; padding:6px 4px; border-bottom:1px solid var(--line); }

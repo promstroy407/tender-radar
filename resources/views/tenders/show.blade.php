@@ -69,55 +69,73 @@
 
     <section class="card">
         <div class="between">
-            <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Документация закупки</h3>
-            @if ($contract->notification_number)
-                <a href="https://zakupki.gov.ru/epz/order/extendedsearch/results.html?searchString={{ $contract->notification_number }}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600">В ЕИС →</a>
+            <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Наш просчёт</h3>
+            @if ($estimateSummary && $estimateSummary->hasData())
+                <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">Подробно →</a>
             @endif
         </div>
-        @if ($contract->documents->isNotEmpty())
-            <ul class="docs">
-                @foreach ($contract->documents as $document)
-                    <li>
-                        <a href="{{ $document->url }}" target="_blank" rel="noopener">{{ $document->name }}</a>
-                        @if ($document->size_bytes)<span class="muted"> · {{ number_format($document->size_bytes / 1048576, 1, ',', ' ') }} МБ</span>@endif
-                        @if ($document->description)<div class="muted" style="font-size:12px">{{ $document->description }}</div>@endif
-                    </li>
-                @endforeach
-            </ul>
+        @if ($estimateSummary && $estimateSummary->hasData())
+            <div class="grid2">
+                <div class="kv"><span class="label">Работы</span><b style="font-size:18px">{{ $money->format($estimateSummary->workKopecks()) }}</b></div>
+                <div class="kv"><span class="label">От суммы контракта</span><b>{{ $estimateSummary->shareLabel() ?? '—' }}</b></div>
+            </div>
+            <p class="muted" style="font-size:12px">{{ $estimateSummary->fromCustomerEstimate() ? 'По смете заказчика, без материалов и оборудования.' : 'По проекту и ведомостям, по нормам ГЭСН региона, без материалов.' }}</p>
+            @foreach (array_slice($estimateSummary->sections, 0, 4) as $row)
+                <div class="between" style="font-size:14px"><span>{{ $row['section']->label() }}</span><span>{{ $money->format($row['kopecks']) }}</span></div>
+            @endforeach
+        @elseif ($contract->estimate)
+            <p class="muted">Документация читается — просчёт появится через пару минут. Если не появится — в документации нет читаемой сметы, ведомости или проекта (сканы — следующий этап).</p>
+            <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">Что прочиталось →</a>
+        @elseif ($documents['useful'] !== [])
+            <p class="muted">Просчёт ещё не запускался.</p>
             <form method="post" action="{{ route('tenders.documents.estimate', $contract) }}">
                 @csrf
-                <button type="submit">Загрузить в смету и посчитать</button>
+                <button type="submit">Посчитать</button>
             </form>
-        @elseif ($contract->documents_checked_at)
-            <p class="muted">В извещении файлов не найдено ({{ $contract->documents_checked_at->translatedFormat('j F, H:i') }}).</p>
-        @elseif ($contract->notification_number)
-            <p class="muted">Документация ещё не загружена из ЕИС.</p>
         @else
-            <p class="muted">У контракта нет номера извещения — документацию найти нельзя.</p>
-        @endif
-        @if ($contract->notification_number)
-            <form method="post" action="{{ route('tenders.documents.fetch', $contract) }}">
-                @csrf
-                <button type="submit" class="secondary">{{ $contract->documents_checked_at ? 'Обновить список' : 'Найти документацию' }}</button>
-            </form>
+            <p class="muted">Считать пока не из чего: в документации закупки нет сметы, ведомости работ или проекта.</p>
         @endif
     </section>
 
     <section class="card">
         <div class="between">
-            <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Смета — для себя</h3>
-            <a href="{{ route('estimates.show', $contract) }}" style="font-size:13px;font-weight:600">{{ $estimateSummary && $estimateSummary->hasData() ? 'Открыть' : 'Посчитать' }} →</a>
-        </div>
-        @if ($estimateSummary && $estimateSummary->hasData())
-            <div class="grid2">
-                <div class="kv"><span class="label">Работы</span><b>{{ $money->format($estimateSummary->workKopecks()) }}</b></div>
-                <div class="kv"><span class="label">От суммы контракта</span><b>{{ $estimateSummary->shareLabel() ?? '—' }}</b></div>
-            </div>
-            @if ($estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice > 0)
-                <p class="muted">Без цены: {{ $estimateSummary->linesUnmatched + $estimateSummary->linesNoPrice }} поз. — проверьте в смете.</p>
+            <h3 class="section-title" style="text-transform:uppercase;letter-spacing:.5px">Документация</h3>
+            @if ($contract->notification_number)
+                <a href="https://zakupki.gov.ru/epz/order/extendedsearch/results.html?searchString={{ $contract->notification_number }}" target="_blank" rel="noopener" style="font-size:13px;font-weight:600">В ЕИС →</a>
             @endif
+        </div>
+        @if ($documents['useful'] !== [])
+            <ul class="docs">
+                @foreach ($documents['useful'] as $document)
+                    <li>
+                        <span class="badge" style="margin-right:6px">{{ $kindLabels[$document->id] ?? '' }}</span>
+                        <a href="{{ $document->url }}" target="_blank" rel="noopener">{{ $document->name }}</a>
+                        @if ($document->size_bytes)<span class="muted"> · {{ number_format($document->size_bytes / 1048576, 1, ',', ' ') }} МБ</span>@endif
+                    </li>
+                @endforeach
+            </ul>
+        @elseif ($contract->documents_checked_at)
+            <p class="muted">Сметы, ведомости работ и проекта в извещении нет.</p>
+        @elseif ($contract->notification_number)
+            <p class="muted">Документация ещё не загружена из ЕИС.</p>
         @else
-            <p class="muted">Загрузите смету заказчика из документации — возьмём стоимость работ по нормативам, без материалов.</p>
+            <p class="muted">У контракта нет номера извещения — документацию найти нельзя.</p>
+        @endif
+        @if ($documents['other'] !== [])
+            <details>
+                <summary class="muted" style="font-size:13px">Прочие файлы закупки ({{ count($documents['other']) }})</summary>
+                <ul class="docs" style="margin-top:8px">
+                    @foreach ($documents['other'] as $document)
+                        <li class="muted" style="font-size:13px"><a href="{{ $document->url }}" target="_blank" rel="noopener">{{ $document->name }}</a></li>
+                    @endforeach
+                </ul>
+            </details>
+        @endif
+        @if ($contract->notification_number)
+            <form method="post" action="{{ route('tenders.documents.fetch', $contract) }}">
+                @csrf
+                <button type="submit" class="secondary small">{{ $contract->documents_checked_at ? 'Обновить из ЕИС' : 'Найти документацию' }}</button>
+            </form>
         @endif
     </section>
 

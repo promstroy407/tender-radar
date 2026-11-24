@@ -28,7 +28,7 @@ class LoadDocumentsIntoEstimate implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         public readonly int $contractId,
-        public readonly int $userId,
+        public readonly ?int $userId,
     ) {
         $this->onQueue(self::QUEUE);
     }
@@ -41,9 +41,10 @@ class LoadDocumentsIntoEstimate implements ShouldBeUnique, ShouldQueue
     public function handle(ContractDocumentsService $documents, LoggerInterface $log): void
     {
         $contract = Contract::query()->find($this->contractId);
-        $user = User::query()->find($this->userId);
+        // Без пользователя — просчёт запустил сервер сам, после поиска документации.
+        $user = $this->userId !== null ? User::query()->find($this->userId) : null;
 
-        if ($contract === null || $user === null) {
+        if ($contract === null) {
             return;
         }
 
