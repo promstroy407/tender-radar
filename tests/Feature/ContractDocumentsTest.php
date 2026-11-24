@@ -104,15 +104,23 @@ class ContractDocumentsTest extends TestCase
         Queue::assertPushedOn('documents', LoadDocumentsIntoEstimate::class, fn (LoadDocumentsIntoEstimate $job): bool => $job->contractId === $contract->id && $job->userId === null);
     }
 
-    public function test_no_auto_count_below_threshold_or_without_useful_files(): void
+    public function test_no_auto_count_below_threshold(): void
     {
         Queue::fake([LoadDocumentsIntoEstimate::class]);
         $cheap = Contract::factory()->create(['notification_number' => self::NOTICE, 'amount_kopecks' => 100]);
-        $paperOnly = Contract::factory()->create(['notification_number' => self::NOTICE, 'amount_kopecks' => 500_000_000]);
         $this->fakeNotice($this->notice([['Смета ЭОМ.xlsx', 'https://zakupki.example.test/file?uid=1', '15360', null]]));
+
         $this->runFetch($cheap);
 
+        Queue::assertNotPushed(LoadDocumentsIntoEstimate::class);
+    }
+
+    public function test_no_auto_count_without_estimate_works_list_or_project(): void
+    {
+        Queue::fake([LoadDocumentsIntoEstimate::class]);
+        $paperOnly = Contract::factory()->create(['notification_number' => self::NOTICE, 'amount_kopecks' => 500_000_000]);
         $this->fakeNotice($this->notice([['Проект контракта.doc', 'https://zakupki.example.test/file?uid=2', '100', null]]));
+
         $this->runFetch($paperOnly);
 
         Queue::assertNotPushed(LoadDocumentsIntoEstimate::class);
