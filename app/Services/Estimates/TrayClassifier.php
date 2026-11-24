@@ -22,9 +22,7 @@ class TrayClassifier
     /** Крепёж, который ставят под лоток, хотя в названии лотка нет. */
     private const SUPPORTS = '/^(кронштейн|консол|подвес|профил|шпильк|траверс|стойк)/u';
 
-    /**
-     * @param  bool  $withTrays  в смете есть лоток: тогда кронштейны, консоли, шпильки без слова «лоток» — тоже его крепёж
-     */
+    /** Сам лоток (не доборный элемент и не стяжка). */
     public function isTray(string $name): bool
     {
         $group = $this->classify($name, false);
@@ -32,6 +30,9 @@ class TrayClassifier
         return $group !== null && $group !== MaterialGroup::Ties && $group !== MaterialGroup::Fittings;
     }
 
+    /**
+     * @param  bool  $withTrays  в смете есть лоток: тогда кронштейны, консоли, шпильки без слова «лоток» — тоже его крепёж
+     */
     public function classify(string $name, bool $withTrays = true): ?MaterialGroup
     {
         $lower = str_replace('ё', 'е', mb_strtolower($name));
