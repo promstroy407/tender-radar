@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $estimate_id
- * @property int|null $estimate_file_id  пусто — работа добавлена вручную
+ * @property int|null $estimate_file_id пусто — работа добавлена вручную
  * @property int $position
  * @property string $name
  * @property string|null $unit

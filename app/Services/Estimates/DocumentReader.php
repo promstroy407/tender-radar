@@ -71,9 +71,6 @@ class DocumentReader
     }
 
     /**
-     * @return list<list<list<string|int|float|null>>>
-     */
-    /**
      * Абзацы документа Word по порядку, включая абзацы в ячейках таблиц.
      *
      * @return list<string>
@@ -166,6 +163,9 @@ class DocumentReader
         return trim((string) preg_replace('/\s+/u', ' ', $text));
     }
 
+    /**
+     * @return list<list<list<string|int|float|null>>>
+     */
     private function readSpreadsheet(string $path): array
     {
         try {
