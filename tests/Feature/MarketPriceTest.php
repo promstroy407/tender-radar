@@ -44,17 +44,17 @@ class MarketPriceTest extends TestCase
 
     public function test_seeder_loads_prices_from_file_without_touching_own_price(): void
     {
-        $own = PriceItem::factory()->create(['name' => 'Монтаж троллейного шинопровода', 'unit' => 'м', 'work_price_kopecks' => 90_000]);
+        $own = PriceItem::factory()->create(['name' => 'Тестовый монтаж шинопровода', 'unit' => 'м', 'work_price_kopecks' => 90_000]);
         $file = database_path(MarketPriceSeeder::FILE);
         $backup = is_file($file) ? (string) file_get_contents($file) : null;
         file_put_contents($file, (string) json_encode(['items' => [
             [
-                'name' => 'Монтаж троллейного шинопровода', 'unit' => 'м', 'section' => 'electric', 'keywords' => 'шинопровод',
+                'name' => 'Тестовый монтаж шинопровода', 'unit' => 'м', 'section' => 'electric', 'keywords' => 'шинопровод',
                 'checked_at' => '2026-11-25',
                 'sources' => [['title' => 'Прайс', 'url' => 'https://a.example.test', 'price_kopecks' => 120_000, 'note' => 'с НДС']],
             ],
             [
-                'name' => 'Монтаж токосъёмника', 'unit' => 'шт', 'section' => 'electric', 'keywords' => 'токосъем',
+                'name' => 'Тестовый токосъёмник', 'unit' => 'шт', 'section' => 'electric', 'keywords' => 'токосъем',
                 'checked_at' => '2026-11-25',
                 'sources' => [['title' => 'Прайс', 'url' => 'https://b.example.test', 'price_kopecks' => 300_000]],
             ],
@@ -74,7 +74,7 @@ class MarketPriceTest extends TestCase
         $this->assertSame(90_000, $own->work_price_kopecks);
         $this->assertSame(120_000, $own->marketPriceKopecks());
 
-        $created = PriceItem::query()->where('name', 'Монтаж токосъёмника')->sole();
+        $created = PriceItem::query()->where('name', 'Тестовый токосъёмник')->sole();
         $this->assertSame(PriceSection::Electric, $created->section);
         $this->assertSame(300_000, $created->marketPriceKopecks());
         $this->assertSame('2026-11-25', $created->market_checked_at?->toDateString());
@@ -83,26 +83,26 @@ class MarketPriceTest extends TestCase
 
     public function test_price_gaps_list_names_only(): void
     {
-        $empty = PriceItem::factory()->create(['name' => 'Монтаж токосъёмника', 'unit' => 'шт', 'work_price_kopecks' => null, 'gesn_code' => null, 'market_sources' => null]);
+        $empty = PriceItem::factory()->create(['name' => 'Тестовый токосъёмник', 'unit' => 'шт', 'work_price_kopecks' => null, 'gesn_code' => null, 'market_sources' => null]);
         PriceItem::factory()->create(['name' => 'С ценой', 'work_price_kopecks' => 1_000]);
         EstimateLine::factory()->count(2)->create(['price_item_id' => $empty->id, 'match' => LineMatch::Auto]);
         EstimateLine::factory()->create(['name' => 'Монтаж секции шинопровода', 'unit' => 'шт', 'price_item_id' => null, 'match' => LineMatch::Auto]);
         EstimateLine::factory()->create(['name' => 'ЭКСПЛИКАЦИЯ', 'unit' => 'шт', 'price_item_id' => null, 'match' => LineMatch::Auto]);
 
-        $this->getJson('/api/price-gaps')
-            ->assertOk()
-            ->assertJsonPath('items_without_price.0.name', 'Монтаж токосъёмника')
-            ->assertJsonPath('items_without_price.0.lines', 2)
-            ->assertJsonCount(1, 'items_without_price')
-            ->assertJsonPath('unmatched_lines.0.name', 'Монтаж секции шинопровода')
-            ->assertJsonCount(1, 'unmatched_lines')
-            ->assertJsonMissingPath('unmatched_lines.0.estimate_id');
+        $response = $this->getJson('/api/price-gaps')->assertOk();
+
+        // Сверху — позиция без цены, по которой больше всего строк смет.
+        $this->assertSame(['name' => 'Тестовый токосъёмник', 'unit' => 'шт', 'section' => 'fire', 'keywords' => 'извещател дым', 'lines' => 2], $response->json('items_without_price.0'));
+        $names = array_column((array) $response->json('items_without_price'), 'name');
+        $this->assertNotContains('С ценой', $names);
+        // Несопоставленные работы — без мусора разбора и без ссылок на тендеры.
+        $this->assertSame([['name' => 'Монтаж секции шинопровода', 'unit' => 'шт', 'count' => 1]], $response->json('unmatched_lines'));
     }
 
     public function test_prices_page_shows_market_sources(): void
     {
         PriceItem::factory()->create([
-            'name' => 'Монтаж токосъёмника', 'unit' => 'шт', 'work_price_kopecks' => null, 'gesn_code' => null,
+            'name' => 'Тестовый токосъёмник', 'unit' => 'шт', 'work_price_kopecks' => null, 'gesn_code' => null,
             'market_sources' => [['title' => 'Прайс подрядчика', 'url' => 'https://a.example.test/price', 'price_kopecks' => 300_000]],
             'market_checked_at' => '2026-11-25',
         ]);
