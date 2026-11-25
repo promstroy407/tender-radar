@@ -8,6 +8,7 @@ use App\Enums\EstimateFileStatus;
 use App\Enums\LineMatch;
 use App\Jobs\SyncNormatives;
 use App\Models\Contract;
+use App\Models\EstimateFile;
 use App\Models\EstimateLine;
 use App\Models\GesnNorm;
 use App\Models\LaborRate;
@@ -129,9 +130,9 @@ class NormativesTest extends TestCase
         foreach (['12' => 1_373_410, '77' => 2_868_690] as $region => $expected) {
             $contract = Contract::factory()->create(['region_code' => $region]);
             $line = EstimateLine::factory()->create(['quantity_milli' => 10_000, 'price_item_id' => $item->id, 'match' => LineMatch::Auto]);
-            $estimate = $line->file->estimate;
+            $estimate = $line->estimate;
             $estimate->update(['contract_id' => $contract->id]);
-            $line->file->update(['status' => EstimateFileStatus::Parsed]);
+            EstimateFile::query()->whereKey($line->estimate_file_id)->update(['status' => EstimateFileStatus::Parsed]);
 
             // 1,68 чел.-ч × ставка × (1 + 90 % + 46 %) = 1 373,41 ₽ (Марий Эл) / 2 868,69 ₽ (Москва) за шт × 10 шт.
             $summary = $this->app->make(EstimateCalculator::class)->summarize($estimate->fresh() ?? $estimate, $estimate->lines()->with('priceItem')->get());

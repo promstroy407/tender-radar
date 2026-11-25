@@ -92,16 +92,19 @@ class CalculatorTest extends TestCase
 
         $this->assertSame(EstimateFileStatus::Parsed, EstimateFile::query()->sole()->status);
         $lines = EstimateLine::query()->with('priceItem')->orderBy('position')->get();
-        $this->assertCount(9, $lines);
         // Демонтаж — только с позициями демонтажа, монтаж — с монтажом.
-        $this->assertSame('Демонтаж троллеев или шинопровода', $lines[0]->priceItem?->name);
-        $this->assertSame('Демонтаж кабеля или провода', $lines[1]->priceItem?->name);
-        $this->assertSame('Демонтаж рубильника', $lines[2]->priceItem?->name);
-        $this->assertSame('Монтаж троллейного шинопровода', $lines[3]->priceItem?->name);
-        $this->assertSame('Монтаж блока подвода питания шинопровода', $lines[4]->priceItem?->name);
-        $this->assertSame('Монтаж токосъёмника', $lines[5]->priceItem?->name);
-        $this->assertSame('Установка световой индикации напряжения', $lines[6]->priceItem?->name);
-        $this->assertSame('Установка рубильника или ящика с рубильником', $lines[8]->priceItem?->name);
+        $this->assertSame([
+            'Демонтаж троллеев или шинопровода',
+            'Демонтаж кабеля или провода',
+            'Демонтаж рубильника',
+            'Монтаж троллейного шинопровода',
+            'Монтаж блока подвода питания шинопровода',
+            'Монтаж токосъёмника',
+            'Установка световой индикации напряжения',
+            'Прокладка кабеля в коробе или кабель-канале',
+            'Установка рубильника или ящика с рубильником',
+        ], $lines->map(fn (EstimateLine $line): ?string => $line->priceItem?->name)->all());
+        $busway = $lines->firstOrFail(fn (EstimateLine $line): bool => $line->name === 'Монтаж: Троллейный шинопровод');
 
         // Цена шинопровода вписана — работа посчитана: 114 м × 1 000 ₽.
         PriceItem::query()->where('name', 'Монтаж троллейного шинопровода')->update(['work_price_kopecks' => 100_000]);
@@ -120,9 +123,9 @@ class CalculatorTest extends TestCase
         $this->assertSame(1_000, $manual->quantity_milli);
 
         // Объём черновика поправили: 114 → 96,5 м.
-        $this->actingAs($admin)->put('/estimate-lines/'.$lines[3]->id, ['price_item' => (string) $lines[3]->price_item_id, 'quantity' => '96,5'])
+        $this->actingAs($admin)->put('/estimate-lines/'.$busway->id, ['price_item' => (string) $busway->price_item_id, 'quantity' => '96,5'])
             ->assertRedirect();
-        $this->assertSame(96_500, $lines[3]->fresh()?->quantity_milli);
+        $this->assertSame(96_500, $busway->fresh()?->quantity_milli);
 
         // 96,5 × 1 000 + 25 000 = 121 500 ₽.
         $this->actingAs($admin)->get('/calculator/'.$estimate->id)->assertOk()->assertSee("121\u{00A0}500\u{00A0}₽");

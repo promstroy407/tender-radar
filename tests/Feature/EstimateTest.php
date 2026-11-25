@@ -244,7 +244,7 @@ class EstimateTest extends TestCase
         $this->assertSame(LineMatch::Manual, $line->match);
         $this->assertNotNull($line->priceItem);
         // Норм в базе нет — берётся цена, вписанная вручную: 3 × 1 300 ₽.
-        $unit = $this->app->make(PriceResolver::class)->unitPrice($line->priceItem, $line->file->estimate->regionCode());
+        $unit = $this->app->make(PriceResolver::class)->unitPrice($line->priceItem, $line->estimate->regionCode());
         $this->assertSame(390_000, $line->workKopecks($unit));
 
         $this->actingAs($this->admin())->put('/estimate-lines/'.$line->id, ['price_item' => 'skip']);

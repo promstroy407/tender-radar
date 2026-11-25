@@ -80,7 +80,7 @@ class DocumentReader
         $document = $this->docxDocument($path);
         $paragraphs = [];
         foreach ($document->getElementsByTagNameNS(self::WORD_NS, 'p') as $p) {
-            $text = $p instanceof DOMElement ? $this->wordText($p) : '';
+            $text = $this->wordText($p);
             if ($text !== '') {
                 $paragraphs[] = $text;
             }
@@ -98,9 +98,6 @@ class DocumentReader
     {
         $tables = [];
         foreach ($this->docxDocument($path)->getElementsByTagNameNS(self::WORD_NS, 'tbl') as $table) {
-            if (! $table instanceof DOMElement) {
-                continue;
-            }
             $rows = [];
             foreach ($table->childNodes as $tr) {
                 if (! $tr instanceof DOMElement || $tr->localName !== 'tr') {
@@ -113,7 +110,7 @@ class DocumentReader
                     }
                     $parts = [];
                     foreach ($tc->getElementsByTagNameNS(self::WORD_NS, 'p') as $p) {
-                        $text = $p instanceof DOMElement ? $this->wordText($p) : '';
+                        $text = $this->wordText($p);
                         if ($text !== '') {
                             $parts[] = $text;
                         }
