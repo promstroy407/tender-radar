@@ -26,6 +26,7 @@ class EstimateParser
         private readonly PriceMatcher $matcher,
         private readonly NormativeTotalsExtractor $normative,
         private readonly ResourceExtractor $resources,
+        private readonly TzDraftExtractor $tz,
         private readonly FilesystemFactory $storage,
         private readonly ConnectionInterface $db,
     ) {}
@@ -33,7 +34,8 @@ class EstimateParser
     public function parse(EstimateFile $file): void
     {
         try {
-            $tables = $this->reader->read($this->storage->disk('local')->path($file->path), $file->extension());
+            $path = $this->storage->disk('local')->path($file->path);
+            $tables = $this->reader->read($path, $file->extension());
 
             $lines = [];
             foreach ($tables as $rows) {
@@ -41,6 +43,14 @@ class EstimateParser
             }
 
             $totals = $this->normative->extract($tables);
+
+            // ТЗ в Word без таблицы объёмов: черновик работ по тексту («Длина – 113 м», «Количество – 2 шт»).
+            if ($lines === [] && $totals === null && $file->extension() === 'docx') {
+                $lines = $this->tz->extract($this->reader->paragraphs($path));
+                if ($lines === []) {
+                    throw new EstimateReadException('В документе не нашли ни таблицы объёмов, ни строк «Длина – … м», «Количество – … шт». Добавьте работы вручную.');
+                }
+            }
 
             if ($lines === [] && $totals === null) {
                 throw new EstimateReadException('Позиций не нашли: нужна таблица с наименованием, единицей и количеством.');

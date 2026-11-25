@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\Estimate;
+use App\Support\Quantity;
 use App\Models\PriceItem;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,7 +32,24 @@ class EstimateLineRequest extends FormRequest
                 }
             }],
             'filter' => ['sometimes', Rule::in(['all', 'attention'])],
+            'quantity' => ['sometimes', 'nullable', 'string', 'regex:'.Quantity::PATTERN],
         ];
+    }
+
+    /** Объём в тысячных; null — не меняли. */
+    public function quantityMilli(): ?int
+    {
+        $value = $this->validated('quantity');
+
+        return is_string($value) && $value !== '' ? Quantity::toMilli($value) : null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['quantity.regex' => 'Объём — число больше нуля, до трёх знаков после запятой.'];
     }
 
     public function skip(): bool

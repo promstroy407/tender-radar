@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('estimate-files/{file}/text', [EstimateController::class, 'text'])->name('estimates.files.text');
         Route::delete('estimate-files/{file}', [EstimateController::class, 'destroyFile'])->name('estimates.files.destroy');
         Route::put('estimate-lines/{line}', [EstimateController::class, 'updateLine'])->name('estimates.lines.update');
+        Route::post('estimates/{estimate}/lines', [EstimateController::class, 'storeLine'])->name('estimates.lines.store');
 
         Route::get('prices', [PriceController::class, 'index'])->name('prices');
         Route::get('prices/new', [PriceController::class, 'create'])->name('prices.create');

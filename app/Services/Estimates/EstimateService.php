@@ -158,14 +158,40 @@ class EstimateService
     }
 
     /** Ручное сопоставление: позиция прайса, «не считать» или вернуть автоматическое. */
-    public function setLineMatch(EstimateLine $line, ?PriceItem $item, bool $skip): EstimateLine
+    /**
+     * Ручная правка позиции: работа из прайса или «не считать», при желании — объём
+     * (черновик по ТЗ часто нужно поправить).
+     */
+    public function setLineMatch(EstimateLine $line, ?PriceItem $item, bool $skip, ?int $quantityMilli = null): EstimateLine
     {
         $line->forceFill([
             'price_item_id' => $skip ? null : $item?->id,
             'match' => $skip ? LineMatch::Skip : LineMatch::Manual,
+            'quantity_milli' => $quantityMilli ?? $line->quantity_milli,
         ])->save();
 
         return $line;
+    }
+
+    /**
+     * Работа, добавленная вручную (ТЗ без таблицы, работы, которых нет в документах).
+     * Без выбранной позиции прайса сопоставляется по названию, как строка сметы.
+     */
+    public function addManualLine(Estimate $estimate, string $name, string $unit, int $quantityMilli, ?PriceItem $item): EstimateLine
+    {
+        $matched = $item ?? $this->matcher->match($name, $unit, PriceItem::query()->where('is_active', true)->get());
+        $position = (int) $estimate->lines()->whereNull('estimate_file_id')->max('position') + 1;
+
+        return EstimateLine::query()->create([
+            'estimate_id' => $estimate->id,
+            'estimate_file_id' => null,
+            'position' => $position,
+            'name' => $name,
+            'unit' => $unit,
+            'quantity_milli' => $quantityMilli,
+            'price_item_id' => $matched?->id,
+            'match' => $item !== null ? LineMatch::Manual : LineMatch::Auto,
+        ]);
     }
 
     /**

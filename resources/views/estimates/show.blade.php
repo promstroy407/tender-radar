@@ -149,7 +149,7 @@
             @error('files') <p class="error">{{ $message }}</p> @enderror
             @error('files.*') <p class="error">{{ $message }}</p> @enderror
             <button type="submit" class="secondary">Загрузить и посчитать</button>
-            <p class="muted" style="font-size:12px">Читаются Excel, CSV и PDF с текстом. ГРАНД-Смету выгрузите в Excel. Сканы и чертежи — следующий этап.</p>
+            <p class="muted" style="font-size:12px">Читаются Excel, CSV, PDF с текстом и Word (.docx): таблица объёмов или ТЗ со строками «Длина – … м», «Количество – … шт». ГРАНД-Смету выгрузите в Excel. Сканы и чертежи — следующий этап.</p>
         </form>
         <div class="row" style="margin-top:8px">
             @if ($page['export'])
@@ -158,6 +158,40 @@
             <a class="button secondary small" href="{{ route('prices') }}">Прайс работ</a>
         </div>
     </details>
+
+    @if ($estimate)
+        <details class="card" id="add-line" @if ($errors->hasAny(['name', 'unit', 'quantity', 'price_item'])) open @endif>
+            <summary>Добавить работу вручную</summary>
+            <p class="muted" style="font-size:12px;margin:0">Для ТЗ без таблицы объёмов и работ, которых нет в документах. Позицию прайса можно не выбирать — подберётся по названию.</p>
+            <form method="post" action="{{ route('estimates.lines.store', $estimate) }}" style="display:flex;flex-direction:column;gap:8px">
+                @csrf
+                <input type="text" name="name" value="{{ old('name') }}" maxlength="500" required placeholder="Например: Монтаж троллейного шинопровода" aria-label="Работа">
+                @error('name') <p class="error">{{ $message }}</p> @enderror
+                <div class="row" style="flex-wrap:nowrap">
+                    <input type="text" name="quantity" value="{{ old('quantity') }}" inputmode="decimal" required placeholder="Объём" aria-label="Объём" style="flex:1;min-width:0">
+                    <select name="unit" aria-label="Единица" style="flex:none;width:auto">
+                        @foreach (\App\Http\Requests\PriceItemRequest::UNITS as $unit)
+                            <option value="{{ $unit }}" @selected(old('unit', 'шт') === $unit)>{{ $unit }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @error('quantity') <p class="error">{{ $message }}</p> @enderror
+                <select name="price_item" aria-label="Позиция прайса" style="font-size:13px">
+                    <option value="">подобрать по названию</option>
+                    @foreach ($sections as $section)
+                        @if ($priceGroups->has($section->value))
+                            <optgroup label="{{ $section->label() }}">
+                                @foreach ($priceGroups[$section->value] as $item)
+                                    <option value="{{ $item->id }}" @selected((string) old('price_item') === (string) $item->id)>{{ $item->name }} ({{ ($unitPrices[$item->id] ?? null) !== null ? $money->format($unitPrices[$item->id]) : 'нет цены' }}/{{ $item->unit }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                    @endforeach
+                </select>
+                <button type="submit">Добавить</button>
+            </form>
+        </details>
+    @endif
 
     @if ($lines && ($lines->total() > 0 || $attention))
         <details class="card" @if ($attention || request()->has('page')) open @endif>
@@ -190,6 +224,7 @@
                     @method('put')
                     <input type="hidden" name="filter" value="{{ $attention ? 'attention' : 'all' }}">
                     <input type="hidden" name="page" value="{{ $lines->currentPage() }}">
+                    <input type="text" name="quantity" value="{{ rtrim(rtrim(number_format($line->quantity_milli / 1000, 3, ',', ''), '0'), ',') }}" inputmode="decimal" aria-label="Объём, {{ $line->unit }}" style="flex:none;width:72px;font-size:13px">
                     <select name="price_item" aria-label="Позиция прайса" style="flex:1;min-width:0;font-size:13px">
                         <option value="skip" @selected($line->match->value === 'skip')>— не считать —</option>
                         @if (! $line->priceItem && $line->match->value !== 'skip')

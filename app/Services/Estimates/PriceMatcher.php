@@ -68,10 +68,15 @@ class PriceMatcher
         return $score;
     }
 
-    /** «Демонтаж», «разборка», «снятие» — в любом месте, в том числе в скобках после работы. */
+    /**
+     * Строка начинается с «Демонтаж», «Разборка», «Снятие» или содержит их в скобках после
+     * работы («Извещатель… (Демонтаж извещателя)»). «Секция для снятия токосъёмника» — не демонтаж.
+     */
     public function isDemolition(string $name): bool
     {
-        return preg_match('/(^|\s)(демонтаж|разборк|снят(ие|ия))/u', $this->normalize($name)) === 1;
+        $lower = str_replace('ё', 'е', mb_strtolower(trim($name)));
+
+        return preg_match('/^(демонтаж|разборк|снятие)|\(\s*(демонтаж|разборк|снятие)/u', $lower) === 1;
     }
 
     private function normalize(string $text): string

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $estimate_id
- * @property int $estimate_file_id
+ * @property int|null $estimate_file_id  пусто — работа добавлена вручную
  * @property int $position
  * @property string $name
  * @property string|null $unit
@@ -25,7 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $price_item_id
  * @property LineMatch $match
  * @property-read PriceItem|null $priceItem
- * @property-read EstimateFile $file
+ * @property-read EstimateFile|null $file
+ * @property-read Estimate $estimate
  */
 #[Fillable(['estimate_id', 'estimate_file_id', 'position', 'name', 'unit', 'quantity_milli', 'material_kopecks', 'price_item_id', 'match'])]
 class EstimateLine extends Model
@@ -39,6 +40,14 @@ class EstimateLine extends Model
     public function priceItem(): BelongsTo
     {
         return $this->belongsTo(PriceItem::class);
+    }
+
+    /**
+     * @return BelongsTo<Estimate, $this>
+     */
+    public function estimate(): BelongsTo
+    {
+        return $this->belongsTo(Estimate::class);
     }
 
     /**

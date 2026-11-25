@@ -7,17 +7,23 @@ namespace App\Services\Estimates;
 use Illuminate\Process\Factory as ProcessFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use DOMDocument;
+use DOMElement;
 use Throwable;
+use ZipArchive;
 
 /**
- * Читает файл документации в строки таблицы: листы Excel (xlsx, xls, ods, csv)
- * или текст PDF, разбитый на колонки по широким пробелам; скан PDF распознаётся (Tesseract).
+ * Читает файл документации в строки таблицы: листы Excel (xlsx, xls, ods, csv),
+ * текст PDF, разбитый на колонки по широким пробелам (скан PDF распознаётся Tesseract),
+ * таблицы Word (docx). Абзацы Word отдельно — для черновика работ по тексту ТЗ.
  */
 class DocumentReader
 {
     public const TABLE_EXTENSIONS = ['xlsx', 'xls', 'xlsm', 'ods', 'csv'];
 
-    public const SUPPORTED_EXTENSIONS = [...self::TABLE_EXTENSIONS, 'pdf'];
+    public const SUPPORTED_EXTENSIONS = [...self::TABLE_EXTENSIONS, 'pdf', 'docx'];
+
+    private const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
     /** Не читаем больше строк с одного листа: сметы крупнее — редкость, а память не бесконечна. */
     private const MAX_ROWS = 20000;
@@ -48,6 +54,7 @@ class DocumentReader
         return match (true) {
             in_array($extension, self::TABLE_EXTENSIONS, true) => $this->readSpreadsheet($path),
             $extension === 'pdf' => [$this->readPdf($path)],
+            $extension === 'docx' => $this->readDocxTables($path),
             default => throw new EstimateReadException($this->unsupportedMessage($extension)),
         };
     }
@@ -57,7 +64,7 @@ class DocumentReader
         return match ($extension) {
             'gsfx', 'gsf', 'xml' => 'Формат ГРАНД-Сметы пока не читается. Выгрузите смету в Excel (в ГРАНД-Смете: «Файл → Экспорт в Excel») и загрузите её.',
             'dwg', 'dxf', 'jpg', 'jpeg', 'png', 'tif', 'tiff' => 'Чертежи и сканы пока не считаются — это следующий этап (распознавание проекта).',
-            'doc', 'docx' => 'Word пока не читается: сохраните таблицу в Excel или PDF.',
+            'doc' => 'Старый формат Word (.doc) не читается: сохраните файл как .docx («Файл → Сохранить как → Документ Word»).',
             'rar', '7z' => 'Архивы RAR и 7z не открываются — распакуйте и загрузите файлы или ZIP.',
             default => 'Файлы .'.$extension.' не читаются. Подходят Excel, CSV, PDF и ZIP с ними.',
         };
@@ -66,6 +73,99 @@ class DocumentReader
     /**
      * @return list<list<list<string|int|float|null>>>
      */
+    /**
+     * Абзацы документа Word по порядку, включая абзацы в ячейках таблиц.
+     *
+     * @return list<string>
+     */
+    public function paragraphs(string $path): array
+    {
+        $document = $this->docxDocument($path);
+        $paragraphs = [];
+        foreach ($document->getElementsByTagNameNS(self::WORD_NS, 'p') as $p) {
+            $text = $p instanceof DOMElement ? $this->wordText($p) : '';
+            if ($text !== '') {
+                $paragraphs[] = $text;
+            }
+        }
+
+        return $paragraphs;
+    }
+
+    /**
+     * Таблицы Word: строка — ячейки, абзацы ячейки через перенос строки.
+     *
+     * @return list<list<list<string|int|float|null>>>
+     */
+    private function readDocxTables(string $path): array
+    {
+        $tables = [];
+        foreach ($this->docxDocument($path)->getElementsByTagNameNS(self::WORD_NS, 'tbl') as $table) {
+            if (! $table instanceof DOMElement) {
+                continue;
+            }
+            $rows = [];
+            foreach ($table->childNodes as $tr) {
+                if (! $tr instanceof DOMElement || $tr->localName !== 'tr') {
+                    continue;
+                }
+                $cells = [];
+                foreach ($tr->childNodes as $tc) {
+                    if (! $tc instanceof DOMElement || $tc->localName !== 'tc') {
+                        continue;
+                    }
+                    $parts = [];
+                    foreach ($tc->getElementsByTagNameNS(self::WORD_NS, 'p') as $p) {
+                        $text = $p instanceof DOMElement ? $this->wordText($p) : '';
+                        if ($text !== '') {
+                            $parts[] = $text;
+                        }
+                    }
+                    $cells[] = implode("\n", $parts);
+                }
+                $rows[] = $cells;
+            }
+            $tables[] = $rows;
+        }
+
+        return $tables;
+    }
+
+    private function docxDocument(string $path): DOMDocument
+    {
+        $zip = new ZipArchive;
+        if ($zip->open($path) !== true) {
+            throw new EstimateReadException('Файл Word повреждён или это не .docx.');
+        }
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        if ($xml === false) {
+            throw new EstimateReadException('В файле Word нет текста документа.');
+        }
+
+        $document = new DOMDocument;
+        if (! $document->loadXML($xml, LIBXML_NONET | LIBXML_COMPACT)) {
+            throw new EstimateReadException('Файл Word не читается.');
+        }
+
+        return $document;
+    }
+
+    /** Текст абзаца: прогоны текста, табуляции и разрывы строк — пробелом. */
+    private function wordText(DOMElement $paragraph): string
+    {
+        $text = '';
+        foreach ($paragraph->getElementsByTagNameNS(self::WORD_NS, '*') as $node) {
+            $text .= match ($node->localName) {
+                't' => $node->textContent,
+                'tab', 'br' => ' ',
+                default => '',
+            };
+        }
+
+        return trim((string) preg_replace('/\s+/u', ' ', $text));
+    }
+
     private function readSpreadsheet(string $path): array
     {
         try {

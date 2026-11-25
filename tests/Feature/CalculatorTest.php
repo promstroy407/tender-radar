@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\EstimateFileStatus;
 use App\Models\Estimate;
 use App\Models\EstimateFile;
 use App\Models\EstimateLine;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
+use Tests\Unit\TzDraftExtractorTest;
+use ZipArchive;
 
 class CalculatorTest extends TestCase
 {
@@ -79,6 +82,57 @@ class CalculatorTest extends TestCase
         $this->assertSame(0, EstimateFile::query()->count());
     }
 
+    public function test_technical_task_in_word_gives_draft_and_works_can_be_added_by_hand(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $estimate = Estimate::factory()->create(['contract_id' => null, 'name' => 'Троллеи', 'region_code' => '12']);
+
+        $this->actingAs($admin)->post('/calculator/'.$estimate->id.'/files', ['files' => [$this->docx(TzDraftExtractorTest::PARAGRAPHS)]])
+            ->assertRedirect('/calculator/'.$estimate->id);
+
+        $this->assertSame(EstimateFileStatus::Parsed, EstimateFile::query()->sole()->status);
+        $lines = EstimateLine::query()->with('priceItem')->orderBy('position')->get();
+        $this->assertCount(9, $lines);
+        // Демонтаж — только с позициями демонтажа, монтаж — с монтажом.
+        $this->assertSame('Демонтаж троллеев или шинопровода', $lines[0]->priceItem?->name);
+        $this->assertSame('Демонтаж кабеля или провода', $lines[1]->priceItem?->name);
+        $this->assertSame('Демонтаж рубильника', $lines[2]->priceItem?->name);
+        $this->assertSame('Монтаж троллейного шинопровода', $lines[3]->priceItem?->name);
+        $this->assertSame('Монтаж блока подвода питания шинопровода', $lines[4]->priceItem?->name);
+        $this->assertSame('Монтаж токосъёмника', $lines[5]->priceItem?->name);
+        $this->assertSame('Установка световой индикации напряжения', $lines[6]->priceItem?->name);
+        $this->assertSame('Установка рубильника или ящика с рубильником', $lines[8]->priceItem?->name);
+
+        // Цена шинопровода вписана — работа посчитана: 114 м × 1 000 ₽.
+        PriceItem::query()->where('name', 'Монтаж троллейного шинопровода')->update(['work_price_kopecks' => 100_000]);
+        $this->actingAs($admin)->get('/calculator/'.$estimate->id)
+            ->assertOk()
+            ->assertSee('Монтаж: Троллейный шинопровод')
+            ->assertSee("114\u{00A0}000\u{00A0}₽")
+            ->assertSee('Добавить работу вручную');
+
+        // Работа, которой нет в ТЗ, — вручную; позиция прайса выбрана сама по названию.
+        PriceItem::query()->where('name', 'Испытания и измерения электроустановки')->update(['work_price_kopecks' => 2_500_000]);
+        $this->actingAs($admin)->post('/estimates/'.$estimate->id.'/lines', ['name' => 'Испытания и измерения', 'unit' => 'компл', 'quantity' => '1'])
+            ->assertRedirect();
+        $manual = EstimateLine::query()->whereNull('estimate_file_id')->sole();
+        $this->assertSame('Испытания и измерения электроустановки', $manual->priceItem?->name);
+        $this->assertSame(1_000, $manual->quantity_milli);
+
+        // Объём черновика поправили: 114 → 96,5 м.
+        $this->actingAs($admin)->put('/estimate-lines/'.$lines[3]->id, ['price_item' => (string) $lines[3]->price_item_id, 'quantity' => '96,5'])
+            ->assertRedirect();
+        $this->assertSame(96_500, $lines[3]->fresh()?->quantity_milli);
+
+        // 96,5 × 1 000 + 25 000 = 121 500 ₽.
+        $this->actingAs($admin)->get('/calculator/'.$estimate->id)->assertOk()->assertSee("121\u{00A0}500\u{00A0}₽");
+
+        $this->actingAs($admin)->post('/estimates/'.$estimate->id.'/lines', ['name' => '', 'unit' => 'кг', 'quantity' => '0'])
+            ->assertSessionHasErrors(['name', 'unit', 'quantity']);
+        $this->actingAs(User::factory()->create())->post('/estimates/'.$estimate->id.'/lines', ['name' => 'Чужая', 'unit' => 'шт', 'quantity' => '1'])
+            ->assertForbidden();
+    }
+
     public function test_validation_and_access(): void
     {
         $admin = User::factory()->admin()->create();
@@ -95,6 +149,28 @@ class CalculatorTest extends TestCase
         $this->actingAs($admin)->get('/calculator/'.$tender->id)->assertNotFound();
         $this->actingAs($admin)->delete('/calculator/'.$tender->id)->assertNotFound();
         $this->assertNotNull(Estimate::query()->find($tender->id));
+    }
+
+    /**
+     * Документ Word с абзацами — как ТЗ без таблицы объёмов.
+     *
+     * @param  list<string>  $paragraphs
+     */
+    private function docx(array $paragraphs): UploadedFile
+    {
+        $body = '';
+        foreach ($paragraphs as $text) {
+            $body .= '<w:p><w:r><w:t xml:space="preserve">'.htmlspecialchars($text, ENT_XML1).'</w:t></w:r></w:p>';
+        }
+        $path = (string) tempnam(sys_get_temp_dir(), 'docx');
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::OVERWRITE);
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>');
+        $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?>'
+            .'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'.$body.'</w:body></w:document>');
+        $zip->close();
+
+        return new UploadedFile($path, 'ТЗ.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
     }
 
     /**

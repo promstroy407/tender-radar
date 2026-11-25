@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\EstimateLineRequest;
 use App\Http\Requests\EstimateUploadRequest;
+use App\Http\Requests\ManualLineRequest;
 use App\Models\Contract;
 use App\Models\Estimate;
 use App\Models\EstimateFile;
@@ -90,12 +91,19 @@ class EstimateController extends Controller
 
     public function updateLine(EstimateLineRequest $request, EstimateLine $line): RedirectResponse
     {
-        $this->estimates->setLineMatch($line, $request->priceItem(), $request->skip());
+        $this->estimates->setLineMatch($line, $request->priceItem(), $request->skip(), $request->quantityMilli());
 
-        return redirect()->to($this->urls->show($line->file->estimate, [
+        return redirect()->to($this->urls->show($line->estimate, [
             'filter' => (string) $request->input('filter', 'all'),
             'page' => $request->integer('page', 1),
         ]).'#line-'.$line->id);
+    }
+
+    public function storeLine(ManualLineRequest $request, Estimate $estimate): RedirectResponse
+    {
+        $line = $this->estimates->addManualLine($estimate, $request->name(), $request->unit(), $request->quantityMilli(), $request->priceItem());
+
+        return redirect()->to($this->urls->show($estimate).'#line-'.$line->id)->with('status', 'Работа добавлена.');
     }
 
     public function export(Contract $contract): BinaryFileResponse
