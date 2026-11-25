@@ -38,7 +38,7 @@
                 <p class="muted">По смете заказчика — итог без материалов, оборудования и НДС. По нашим расценкам — её же работы по нашему прайсу (ставки региона «{{ $page['region'] }}»): посчитано {{ $summary->linesPriced }} из {{ $summary->linesTotal - $summary->linesSkipped }} позиций.@if ($summary->linesTotal === 0) Работы сметы ещё не выбраны — нажмите «Прочитать заново» у файла сметы.@endif</p>
                 <p><a href="{{ $page['materials'] }}" style="font-size:13px;font-weight:600">Лоток и комплектующие по смете заказчика →</a></p>
             @else
-                <p class="muted">Посчитано по проекту и ведомостям: {{ $summary->linesPriced }} работ по нормам ГЭСН и ставкам региона «{{ $page['region'] }}», с накладными и прибылью, без материалов.</p>
+                <p class="muted">Посчитано работ: {{ $summary->linesPriced }}, без материалов.@if ($summary->linesPriced > $summary->linesMarket) {{ $summary->linesPriced - $summary->linesMarket }} — по нормам ГЭСН (ставки региона «{{ $page['region'] }}», с накладными и прибылью) или по вашим ценам.@endif @if ($summary->linesMarket > 0) {{ $summary->linesMarket }} — по рыночной цене (средняя по открытым прайсам, оценка).@endif</p>
             @endif
             @if ($summary->linesUnmatched + $summary->linesNoPrice > 0)
                 <p class="muted" style="color:var(--hotink)">Не посчитано позиций: {{ $summary->linesUnmatched + $summary->linesNoPrice }} — работ, которых нет в нашем прайсе. Список — ниже, в «Не посчитано».</p>
