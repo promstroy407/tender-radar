@@ -25,7 +25,7 @@ class PriceMatcher
     public function match(string $name, ?string $unit, Collection $items): ?PriceItem
     {
         $text = $this->normalize($name);
-        $demolition = $this->isDemolition($text);
+        $demolition = $this->isDemolition($name);
         $best = null;
         $bestScore = 0;
 
