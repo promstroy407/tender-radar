@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\Estimate;
-use App\Support\Quantity;
 use App\Models\PriceItem;
+use App\Support\Quantity;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
