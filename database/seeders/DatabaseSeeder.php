@@ -14,6 +14,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([RegionSeeder::class, PriceItemSeeder::class]);
+        $this->call([RegionSeeder::class, PriceItemSeeder::class, MarketPriceSeeder::class]);
     }
 }

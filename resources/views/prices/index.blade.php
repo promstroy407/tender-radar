@@ -42,11 +42,22 @@
                             {{ $rubles($item->work_price_kopecks) }} ₽/{{ $item->unit }}
                         @elseif ($item->gesn_code)
                             ГЭСН {{ $item->gesn_code }} — ждём загрузку
+                        @elseif ($item->marketPriceKopecks() !== null)
+                            рынок ≈ {{ $rubles($item->marketPriceKopecks()) }} ₽/{{ $item->unit }}
                         @else
                             нет цены
                         @endif
                     </span>
                 </summary>
+                @if ($item->market_sources)
+                    <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
+                        <p class="muted" style="font-size:12px;margin:0">Рыночная цена — средняя по открытым прайсам{{ $item->market_checked_at ? ', проверено '.$item->market_checked_at->format('d.m.Y') : '' }}. Это оценка: считается, только если нет вашей цены и нормы ГЭСН.</p>
+                        @foreach ($item->market_sources as $source)
+                            <div class="between"><a href="{{ $source['url'] }}" target="_blank" rel="noopener nofollow">{{ $source['title'] }}</a><b>{{ $money->format($source['price_kopecks']) }}</b></div>
+                            @if (! empty($source['note'])) <span class="muted" style="font-size:12px">{{ $source['note'] }}</span> @endif
+                        @endforeach
+                    </div>
+                @endif
                 @if ($regionPrices !== [])
                     <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
                         @foreach ($regions as $region)

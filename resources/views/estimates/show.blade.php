@@ -70,10 +70,13 @@
                 @foreach ($summary->topLines as $row)
                     <li>
                         <span class="work-name">{{ $row['name'] }}</span>
-                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}</span><b style="color:var(--ink)">{{ $money->format($row['kopecks']) }}</b></span>
+                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}@if ($row['market']) · <span title="Средняя по открытым прайсам — оценка">рынок</span>@endif</span><b style="color:var(--ink)">{{ $money->format($row['kopecks']) }}</b></span>
                     </li>
                 @endforeach
             </ul>
+            @if ($summary->linesMarket > 0)
+                <p class="muted" style="font-size:12px">По рыночной цене (средняя по открытым прайсам, оценка) посчитано позиций: {{ $summary->linesMarket }} на {{ $money->format($summary->marketKopecks) }}. Свою цену можно вписать в «Прайсе работ» — она главнее.</p>
+            @endif
             <p class="muted" style="font-size:12px">Это прикидка для себя, не смета для отправки. Материалы считаются отдельно.</p>
         </section>
     @endif

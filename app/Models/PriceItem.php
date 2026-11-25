@@ -9,6 +9,7 @@ use Database\Factories\PriceItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -22,14 +23,42 @@ use Illuminate\Support\Carbon;
  * @property string|null $gesn_code
  * @property string $keywords
  * @property bool $is_active
+ * @property list<array{title: string, url: string, price_kopecks: int, note?: string}>|null $market_sources
+ * @property Carbon|null $market_checked_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
-#[Fillable(['section', 'name', 'unit', 'work_price_kopecks', 'gesn_code', 'keywords', 'is_active'])]
+#[Fillable(['section', 'name', 'unit', 'work_price_kopecks', 'gesn_code', 'keywords', 'is_active', 'market_sources', 'market_checked_at'])]
 class PriceItem extends Model
 {
     /** @use HasFactory<PriceItemFactory> */
     use HasFactory;
+
+    /**
+     * Строки смет, сопоставленные с позицией.
+     *
+     * @return HasMany<EstimateLine, $this>
+     */
+    public function lines(): HasMany
+    {
+        return $this->hasMany(EstimateLine::class);
+    }
+
+    /**
+     * Рыночная цена — средняя по источникам, до копейки («половина вверх»); null — источников нет.
+     */
+    public function marketPriceKopecks(): ?int
+    {
+        $prices = array_values(array_filter(
+            array_map(fn (array $source): int => (int) $source['price_kopecks'], $this->market_sources ?? []),
+            fn (int $price): bool => $price > 0,
+        ));
+        if ($prices === []) {
+            return null;
+        }
+
+        return intdiv(array_sum($prices) * 2 + count($prices), count($prices) * 2);
+    }
 
     /** Позиция демонтажа: по ней считаются только строки сметы с демонтажем. */
     public function isDemolition(): bool
@@ -56,6 +85,8 @@ class PriceItem extends Model
             'section' => PriceSection::class,
             'work_price_kopecks' => 'integer',
             'is_active' => 'boolean',
+            'market_sources' => 'array',
+            'market_checked_at' => 'date',
         ];
     }
 }

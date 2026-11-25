@@ -17,7 +17,7 @@ final readonly class EstimateSummary
 {
     /**
      * @param  list<array{section: PriceSection, kopecks: int, lines: int}>  $sections  работы по разделам, крупные сверху
-     * @param  list<array{name: string, quantity_milli: int, unit: string|null, kopecks: int}>  $topLines  самые дорогие работы
+     * @param  list<array{name: string, quantity_milli: int, unit: string|null, kopecks: int, market: bool}>  $topLines  самые дорогие работы; market — цена рыночная (оценка)
      * @param  list<array{name: string, quantity_milli: int, unit: string|null, price_item: PriceItem|null}>  $unpriced  что не посчитано; price_item — есть в прайсе, но без цены
      */
     public function __construct(
@@ -27,6 +27,8 @@ final readonly class EstimateSummary
         public int $contractKopecks,
         public int $linesTotal,
         public int $linesPriced,
+        public int $linesMarket,
+        public int $marketKopecks,
         public int $linesUnmatched,
         public int $linesNoPrice,
         public int $linesSkipped,

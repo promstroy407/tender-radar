@@ -62,5 +62,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Заявки с сайта: не больше 30 запросов в минуту, дальше — 429.
         RateLimiter::for('leads', fn (Request $request): Limit => Limit::perMinute(30)->by('leads'));
+        // Список позиций без цены: читают раз в день, 10 в минуту с адреса — с запасом.
+        RateLimiter::for('price-gaps', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->ip()));
     }
 }

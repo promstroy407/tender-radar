@@ -38,6 +38,7 @@ class EstimateCalculator
         $top = [];
         $unpriced = [];
         $regionCode = $estimate->regionCode();
+        $marketLines = $marketKopecks = 0;
 
         // Есть смета заказчика с работами — по нашему прайсу считаем её же, а не проект:
         // иначе один и тот же объём попадёт дважды.
@@ -72,12 +73,17 @@ class EstimateCalculator
             } else {
                 $priced++;
                 $work += $lineWork;
+                $market = $this->prices->isMarket($line->priceItem, $regionCode);
+                if ($market) {
+                    $marketLines++;
+                    $marketKopecks += $lineWork;
+                }
 
                 $section = $line->priceItem->section;
                 $bySection[$section->value] ??= ['section' => $section, 'kopecks' => 0, 'lines' => 0];
                 $bySection[$section->value]['kopecks'] += $lineWork;
                 $bySection[$section->value]['lines']++;
-                $top[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'kopecks' => $lineWork];
+                $top[] = ['name' => $line->name, 'quantity_milli' => $line->quantity_milli, 'unit' => $line->unit, 'kopecks' => $lineWork, 'market' => $market];
             }
         }
 
@@ -98,6 +104,8 @@ class EstimateCalculator
             contractKopecks: $estimate->contract->amount_kopecks ?? 0,
             linesTotal: $lines->count(),
             linesPriced: $priced,
+            linesMarket: $marketLines,
+            marketKopecks: $marketKopecks,
             linesUnmatched: $unmatched,
             linesNoPrice: $noPrice,
             linesSkipped: $skipped,
