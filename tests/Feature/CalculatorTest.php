@@ -116,7 +116,7 @@ class CalculatorTest extends TestCase
 
         // Работа, которой нет в ТЗ, — вручную; позиция прайса выбрана сама по названию.
         PriceItem::query()->where('name', 'Испытания и измерения электроустановки')->update(['work_price_kopecks' => 2_500_000]);
-        $this->actingAs($admin)->post('/estimates/'.$estimate->id.'/lines', ['name' => 'Испытания и измерения', 'unit' => 'компл', 'quantity' => '1'])
+        $this->actingAs($admin)->post('/estimates/'.$estimate->id.'/lines', ['name' => 'Испытания электрооборудования, измерение сопротивления изоляции', 'unit' => 'компл', 'quantity' => '1'])
             ->assertRedirect();
         $manual = EstimateLine::query()->whereNull('estimate_file_id')->sole();
         $this->assertSame('Испытания и измерения электроустановки', $manual->priceItem?->name);
