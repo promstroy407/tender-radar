@@ -20,7 +20,7 @@
 
 @section('content')
     <div class="card">
-        <p class="muted">Цена работы считается по норме ГЭСН: затраты труда × сметная цена часа рабочего в регионе тендера (ФГИС ЦС) + накладные расходы и сметная прибыль. Без машин (≈2 % в электромонтаже) и материалов. Нормы подобраны начерно — проверьте. Если нормы нет, используется цена, вписанная вручную.</p>
+        <p class="muted">Цена работы считается по норме ГЭСН: затраты труда × сметная цена часа рабочего в регионе тендера (ФГИС ЦС) + накладные расходы и сметная прибыль. Без машин (≈2 % в электромонтаже) и материалов. Нормы подобраны начерно — проверьте. Ваша цена главнее нормы: если она вписана (вручную или из рынка), считается по ней.</p>
         <p class="muted"><b>Ключевые слова</b> — через запятую. Каждая фраза — слова, которые все должны быть в строке сметы (можно начало слова: «извещател дым»). Побеждает самая подробная фраза.</p>
     </div>
 
@@ -36,10 +36,10 @@
                     <span style="font-size:14px;{{ $item->is_active ? '' : 'color:var(--muted);text-decoration:line-through' }}">{{ $item->name }}</span>
                     @php($regionPrices = array_filter($normative[$item->id] ?? []))
                     <span style="flex:none;font-size:13px;{{ $regionPrices === [] && $item->work_price_kopecks === null ? 'color:var(--hot)' : '' }}">
-                        @if ($regionPrices !== [])
-                            ГЭСН {{ $item->gesn_code }}
-                        @elseif ($item->work_price_kopecks !== null)
+                        @if ($item->work_price_kopecks !== null)
                             {{ $rubles($item->work_price_kopecks) }} ₽/{{ $item->unit }}
+                        @elseif ($regionPrices !== [])
+                            ГЭСН {{ $item->gesn_code }}
                         @elseif ($item->gesn_code)
                             ГЭСН {{ $item->gesn_code }} — ждём загрузку
                         @elseif ($item->marketPriceKopecks() !== null)
@@ -51,7 +51,7 @@
                 </summary>
                 @if ($item->market_sources)
                     <div style="display:flex;flex-direction:column;gap:4px;font-size:13px">
-                        <p class="muted" style="font-size:12px;margin:0">Рыночная цена — средняя по открытым прайсам{{ $item->market_checked_at ? ', проверено '.$item->market_checked_at->format('d.m.Y') : '' }}. Это оценка: считается, только если нет вашей цены и нормы ГЭСН.</p>
+                        <p class="muted" style="font-size:12px;margin:0">Рынок — открытые прайсы{{ $item->market_checked_at ? ', проверено '.$item->market_checked_at->format('d.m.Y') : '' }}. Максимальная цена записывается в вашу, если она выше.</p>
                         @foreach ($item->market_sources as $source)
                             <div class="between"><a href="{{ $source['url'] }}" target="_blank" rel="noopener nofollow">{{ $source['title'] }}</a><b>{{ $money->format($source['price_kopecks']) }}</b></div>
                             @if (! empty($source['note'])) <span class="muted" style="font-size:12px">{{ $source['note'] }}</span> @endif

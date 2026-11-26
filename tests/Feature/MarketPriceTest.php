@@ -18,7 +18,7 @@ class MarketPriceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_market_price_is_average_of_sources_and_used_only_without_own_price(): void
+    public function test_market_price_is_maximum_of_sources_and_used_only_without_own_price(): void
     {
         $item = PriceItem::factory()->create([
             'unit' => 'м',
@@ -32,9 +32,9 @@ class MarketPriceTest extends TestCase
         ]);
         $resolver = $this->app->make(PriceResolver::class);
 
-        // (1 000 + 1 500 + 1 200,01) / 3 = 1 233,33666… → 1 233,34 ₽.
-        $this->assertSame(123_334, $item->marketPriceKopecks());
-        $this->assertSame(123_334, $resolver->unitPrice($item, '12'));
+        // Берётся максимальная из источников: 1 500 ₽.
+        $this->assertSame(150_000, $item->marketPriceKopecks());
+        $this->assertSame(150_000, $resolver->unitPrice($item, '12'));
         $this->assertTrue($resolver->isMarket($item, '12'));
 
         $item->update(['work_price_kopecks' => 90_000]);
@@ -42,7 +42,7 @@ class MarketPriceTest extends TestCase
         $this->assertFalse($resolver->isMarket($item->fresh() ?? $item, '12'));
     }
 
-    public function test_seeder_loads_prices_from_file_without_touching_own_price(): void
+    public function test_seeder_raises_own_price_to_market_maximum_once_per_check(): void
     {
         $own = PriceItem::factory()->create(['name' => 'Тестовый монтаж шинопровода', 'unit' => 'м', 'work_price_kopecks' => 90_000]);
         $file = database_path(MarketPriceSeeder::FILE);
@@ -65,17 +65,23 @@ class MarketPriceTest extends TestCase
 
         try {
             $this->seed(MarketPriceSeeder::class);
+            // Цену снизили вручную — повторная выкладка без новой проверки её не трогает.
+            PriceItem::query()->where('name', 'Тестовый монтаж шинопровода')->update(['work_price_kopecks' => 100_000]);
             $this->seed(MarketPriceSeeder::class);
+            $this->assertSame(100_000, PriceItem::query()->where('name', 'Тестовый монтаж шинопровода')->value('work_price_kopecks'));
+            PriceItem::query()->where('name', 'Тестовый монтаж шинопровода')->update(['work_price_kopecks' => 120_000]);
         } finally {
             $backup === null ? unlink($file) : file_put_contents($file, $backup);
         }
 
+        // Максимум рынка выше вашей цены — записан в вашу.
         $own->refresh();
-        $this->assertSame(90_000, $own->work_price_kopecks);
+        $this->assertSame(120_000, $own->work_price_kopecks);
         $this->assertSame(120_000, $own->marketPriceKopecks());
 
         $created = PriceItem::query()->where('name', 'Тестовый токосъёмник')->sole();
         $this->assertSame(PriceSection::Electric, $created->section);
+        $this->assertSame(300_000, $created->work_price_kopecks);
         $this->assertSame(300_000, $created->marketPriceKopecks());
         $this->assertSame('2026-11-25', $created->market_checked_at?->toDateString());
         $this->assertSame(0, PriceItem::query()->where('name', 'Пустая')->count());
@@ -95,6 +101,9 @@ class MarketPriceTest extends TestCase
         $this->assertSame(['name' => 'Тестовый токосъёмник', 'unit' => 'шт', 'section' => 'fire', 'keywords' => 'извещател дым', 'lines' => 2], $response->json('items_without_price.0'));
         $names = array_column((array) $response->json('items_without_price'), 'name');
         $this->assertNotContains('С ценой', $names);
+        // Очередь пересмотра — все позиции, без цен.
+        $this->assertContains('С ценой', array_column((array) $response->json('items_to_review'), 'name'));
+        $this->assertArrayNotHasKey('work_price_kopecks', (array) $response->json('items_to_review.0'));
         // Несопоставленные работы — без мусора разбора и без ссылок на тендеры.
         $this->assertSame([['name' => 'Монтаж секции шинопровода', 'unit' => 'шт', 'count' => 1]], $response->json('unmatched_lines'));
     }
@@ -110,6 +119,7 @@ class MarketPriceTest extends TestCase
         $this->actingAs(User::factory()->admin()->create())->get('/prices')
             ->assertOk()
             ->assertSee('рынок ≈ 3000 ₽/шт')
+            ->assertSee('Максимальная цена записывается в вашу')
             ->assertSee('https://a.example.test/price')
             ->assertSee('проверено 25.11.2026');
     }

@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Чего не хватает в прайсе — для ежедневного поиска рыночных цен:
- * позиции без цены (ни вашей, ни нормы, ни рыночной) и работы из смет, не
- * сопоставленные ни с одной позицией. Только названия и единицы: без заказчиков,
- * сумм и ссылок на тендеры.
+ * позиции без цены (ни вашей, ни нормы, ни рыночной), работы из смет, не
+ * сопоставленные ни с одной позицией, и очередь пересмотра всех позиций по рынку.
+ * Только названия и единицы: без цен, заказчиков, сумм и ссылок на тендеры.
  */
 class PriceGapReport
 {
@@ -24,7 +24,7 @@ class PriceGapReport
     ) {}
 
     /**
-     * @return array{items_without_price: list<array{name: string, unit: string, section: string, keywords: string, lines: int}>, unmatched_lines: list<array{name: string, unit: string|null, count: int}>}
+     * @return array{items_without_price: list<array{name: string, unit: string, section: string, keywords: string, lines: int}>, unmatched_lines: list<array{name: string, unit: string|null, count: int}>, items_to_review: list<array{name: string, unit: string, section: string, keywords: string, market_checked_at: string|null}>}
      */
     public function build(): array
     {
@@ -69,6 +69,19 @@ class PriceGapReport
             $unmatched[] = ['name' => mb_substr($name, 0, 300), 'unit' => $unit, 'count' => (int) $row->lines_count];
         }
 
-        return ['items_without_price' => $withoutPrice, 'unmatched_lines' => $unmatched];
+        // Пересмотр цен по рынку (решение 26.11.2026): все позиции, сначала не проверенные,
+        // потом давно проверенные. Без самих цен — только что проверить.
+        $review = [];
+        foreach (PriceItem::query()->where('is_active', true)->orderByRaw('market_checked_at asc nulls first')->orderBy('name')->get() as $item) {
+            $review[] = [
+                'name' => $item->name,
+                'unit' => $item->unit,
+                'section' => $item->section->value,
+                'keywords' => $item->keywords,
+                'market_checked_at' => $item->market_checked_at?->toDateString(),
+            ];
+        }
+
+        return ['items_without_price' => $withoutPrice, 'unmatched_lines' => $unmatched, 'items_to_review' => $review];
     }
 }

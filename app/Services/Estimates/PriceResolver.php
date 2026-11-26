@@ -9,10 +9,9 @@ use App\Services\Normatives\NormativePrice;
 use App\Services\Normatives\NormativePricer;
 
 /**
- * Цена работы за единицу позиции прайса в регионе тендера: по нормативам
- * (ГЭСН × ставка труда региона + НР + СП), если у позиции есть норма и ставки
- * загружены; иначе — цена, вписанная вручную; иначе — рыночная (средняя по прайсам,
- * это оценка — на странице помечается).
+ * Цена работы за единицу позиции прайса в регионе тендера (решение заказчика 26.11.2026):
+ * ваша цена (вписанная вручную или записанная из рынка); если её нет — по нормативам
+ * (ГЭСН × ставка труда региона + НР + СП); если и норм нет — максимальная рыночная.
  */
 class PriceResolver
 {
@@ -25,10 +24,10 @@ class PriceResolver
 
     public function unitPrice(PriceItem $item, string $region): ?int
     {
-        return $this->normative($item, $region)->kopecksPerUnit ?? $item->work_price_kopecks ?? $item->marketPriceKopecks();
+        return $item->work_price_kopecks ?? $this->normative($item, $region)->kopecksPerUnit ?? $item->marketPriceKopecks();
     }
 
-    /** Цена взята с рынка: ни нормы, ни вашей цены нет. */
+    /** Цена взята с рынка: ни вашей цены, ни нормы нет. */
     public function isMarket(PriceItem $item, string $region): bool
     {
         return $this->normative($item, $region) === null && $item->work_price_kopecks === null && $item->marketPriceKopecks() !== null;

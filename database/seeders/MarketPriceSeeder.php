@@ -11,9 +11,13 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Рыночные цены из database/data/market_prices.json — их раз в день дополняет задача
- * поиска цен (средняя по 2–4 открытым прайсам, с адресами). Позиции, которой ещё нет
- * в прайсе, создаётся (с ключевыми словами из файла). Вашу цену и нормы не трогает.
- * Запускается при каждой выкладке (db:seed), повторный запуск ничего не дублирует.
+ * поиска цен (2–4 открытых прайса, с адресами). Позиции, которой ещё нет в прайсе,
+ * создаётся (с ключевыми словами из файла).
+ *
+ * Решение заказчика 26.11.2026: максимальная рыночная цена записывается в вашу цену,
+ * если она выше («чтобы не работать в минус»). Делается это только при новой проверке
+ * (дата в файле позже даты в базе): ручная правка цены держится до следующей проверки
+ * этой позиции. Запускается при каждой выкладке (db:seed), повтор ничего не меняет.
  */
 class MarketPriceSeeder extends Seeder
 {
@@ -41,7 +45,16 @@ class MarketPriceSeeder extends Seeder
             if (! $item->exists) {
                 $item->fill(['section' => $parsed['section'], 'keywords' => $parsed['keywords'], 'is_active' => true]);
             }
-            $item->fill(['market_sources' => $parsed['sources'], 'market_checked_at' => $parsed['checked_at']])->save();
+            if ($item->exists && $item->market_checked_at !== null && $item->market_checked_at->toDateString() >= $parsed['checked_at']) {
+                continue;
+            }
+
+            $item->fill(['market_sources' => $parsed['sources'], 'market_checked_at' => $parsed['checked_at']]);
+            $max = $item->marketPriceKopecks();
+            if ($max !== null && ($item->work_price_kopecks === null || $item->work_price_kopecks < $max)) {
+                $item->work_price_kopecks = $max;
+            }
+            $item->save();
         }
     }
 

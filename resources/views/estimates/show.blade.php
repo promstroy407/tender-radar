@@ -38,7 +38,7 @@
                 <p class="muted">По смете заказчика — итог без материалов, оборудования и НДС. По нашим расценкам — её же работы по нашему прайсу (ставки региона «{{ $page['region'] }}»): посчитано {{ $summary->linesPriced }} из {{ $summary->linesTotal - $summary->linesSkipped }} позиций.@if ($summary->linesTotal === 0) Работы сметы ещё не выбраны — нажмите «Прочитать заново» у файла сметы.@endif</p>
                 <p><a href="{{ $page['materials'] }}" style="font-size:13px;font-weight:600">Лоток и комплектующие по смете заказчика →</a></p>
             @else
-                <p class="muted">Посчитано работ: {{ $summary->linesPriced }}, без материалов.@if ($summary->linesPriced > $summary->linesMarket) {{ $summary->linesPriced - $summary->linesMarket }} — по нормам ГЭСН (ставки региона «{{ $page['region'] }}», с накладными и прибылью) или по вашим ценам.@endif @if ($summary->linesMarket > 0) {{ $summary->linesMarket }} — по рыночной цене (средняя по открытым прайсам, оценка).@endif</p>
+                <p class="muted">Посчитано работ: {{ $summary->linesPriced }}, без материалов.@if ($summary->linesPriced > $summary->linesMarket) {{ $summary->linesPriced - $summary->linesMarket }} — по вашим ценам или по нормам ГЭСН (ставки региона «{{ $page['region'] }}», с накладными и прибылью).@endif @if ($summary->linesMarket > 0) {{ $summary->linesMarket }} — по рыночной цене (максимальная по открытым прайсам, оценка).@endif</p>
             @endif
             @if ($summary->linesUnmatched + $summary->linesNoPrice > 0)
                 <p class="muted" style="color:var(--hotink)">Не посчитано позиций: {{ $summary->linesUnmatched + $summary->linesNoPrice }} — работ, которых нет в нашем прайсе. Список — ниже, в «Не посчитано».</p>
@@ -70,12 +70,12 @@
                 @foreach ($summary->topLines as $row)
                     <li>
                         <span class="work-name">{{ $row['name'] }}</span>
-                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}@if ($row['market']) · <span title="Средняя по открытым прайсам — оценка">рынок</span>@endif</span><b style="color:var(--ink)">{{ $money->format($row['kopecks']) }}</b></span>
+                        <span class="between muted"><span>{{ rtrim(rtrim(number_format($row['quantity_milli'] / 1000, 3, ',', ' '), '0'), ',') }} {{ $row['unit'] }}@if ($row['market']) · <span title="Максимальная по открытым прайсам — оценка">рынок</span>@endif</span><b style="color:var(--ink)">{{ $money->format($row['kopecks']) }}</b></span>
                     </li>
                 @endforeach
             </ul>
             @if ($summary->linesMarket > 0)
-                <p class="muted" style="font-size:12px">По рыночной цене (средняя по открытым прайсам, оценка) посчитано позиций: {{ $summary->linesMarket }} на {{ $money->format($summary->marketKopecks) }}. Свою цену можно вписать в «Прайсе работ» — она главнее.</p>
+                <p class="muted" style="font-size:12px">По рыночной цене (максимальная по открытым прайсам, оценка) посчитано позиций: {{ $summary->linesMarket }} на {{ $money->format($summary->marketKopecks) }}. Свою цену можно вписать в «Прайсе работ» — она главнее.</p>
             @endif
             <p class="muted" style="font-size:12px">Это прикидка для себя, не смета для отправки. Материалы считаются отдельно.</p>
         </section>

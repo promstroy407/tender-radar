@@ -45,19 +45,14 @@ class PriceItem extends Model
     }
 
     /**
-     * Рыночная цена — средняя по источникам, до копейки («половина вверх»); null — источников нет.
+     * Рыночная цена — максимальная из источников (решение заказчика 26.11.2026: «чтобы не
+     * работать в минус»); null — источников нет.
      */
     public function marketPriceKopecks(): ?int
     {
-        $prices = array_values(array_filter(
-            array_map(fn (array $source): int => (int) $source['price_kopecks'], $this->market_sources ?? []),
-            fn (int $price): bool => $price > 0,
-        ));
-        if ($prices === []) {
-            return null;
-        }
+        $prices = array_map(fn (array $source): int => (int) $source['price_kopecks'], $this->market_sources ?? []);
 
-        return intdiv(array_sum($prices) * 2 + count($prices), count($prices) * 2);
+        return $prices === [] ? null : max($prices);
     }
 
     /** Позиция демонтажа: по ней считаются только строки сметы с демонтажем. */
