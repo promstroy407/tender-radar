@@ -86,6 +86,8 @@ class CalculatorTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $estimate = Estimate::factory()->create(['contract_id' => null, 'name' => 'Троллеи', 'region_code' => '12']);
+        // Считаем с чистого листа: цены из миграций (смета заказчика 26.11) здесь не нужны.
+        PriceItem::query()->update(['work_price_kopecks' => null, 'market_sources' => null]);
 
         $this->actingAs($admin)->post('/calculator/'.$estimate->id.'/files', ['files' => [$this->docx(TzDraftExtractorTest::PARAGRAPHS)]])
             ->assertRedirect('/calculator/'.$estimate->id);
@@ -101,7 +103,7 @@ class CalculatorTest extends TestCase
             'Монтаж блока подвода питания шинопровода',
             'Монтаж токосъёмника',
             'Установка световой индикации напряжения',
-            'Прокладка кабеля в коробе или кабель-канале',
+            'Прокладка питающего кабеля по лоткам и стенам',
             'Установка рубильника или ящика с рубильником',
         ], $lines->map(fn (EstimateLine $line): ?string => $line->priceItem?->name)->all());
         $busway = $lines->firstOrFail(fn (EstimateLine $line): bool => $line->name === 'Монтаж: Троллейный шинопровод');

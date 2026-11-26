@@ -125,7 +125,8 @@ class NormativesTest extends TestCase
         $this->norm('10-08-002-02', 'шт', [['code' => '1-100-38', 'milli' => 1_680]], 'communication');
         $this->rate('12', '1-100-38', 34_640);
         $this->rate('77', '1-100-38', 72_354);
-        $item = PriceItem::factory()->create(['unit' => 'шт', 'gesn_code' => '10-08-002-02']);
+        // Своей цены нет — считается по норме (своя главнее нормы).
+        $item = PriceItem::factory()->create(['unit' => 'шт', 'gesn_code' => '10-08-002-02', 'work_price_kopecks' => null]);
 
         foreach (['12' => 1_373_410, '77' => 2_868_690] as $region => $expected) {
             $contract = Contract::factory()->create(['region_code' => $region]);
