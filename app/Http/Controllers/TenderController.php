@@ -23,6 +23,9 @@ use Illuminate\Http\Request;
  */
 class TenderController extends Controller
 {
+    /** Ключ сессии: фильтры и страница ленты, с которых открыли карточку. */
+    public const FEED_QUERY = 'feed.query';
+
     public function __construct(
         private readonly ContractService $contracts,
         private readonly KpTemplateService $template,
@@ -37,6 +40,9 @@ class TenderController extends Controller
     public function index(ContractIndexRequest $request): View
     {
         $search = $request->toSearch(onlyNew: true);
+
+        // Запоминаем фильтры и страницу ленты: «Назад» из карточки вернёт туда же.
+        $request->session()->put(self::FEED_QUERY, $request->feedQuery());
 
         return view('tenders.index', [
             'contracts' => $this->contracts->search($search)->withQueryString(),
@@ -57,6 +63,7 @@ class TenderController extends Controller
         }
 
         $contract->load(['company', 'region', 'offer', 'deal', 'estimate', 'documents']);
+        $feedQuery = $request->session()->get(self::FEED_QUERY);
         $rendered = $this->template->render($contract);
         $documents = $this->documents->split($contract);
         $kindLabels = [];
@@ -74,6 +81,7 @@ class TenderController extends Controller
             'money' => $this->money,
             'documents' => $documents,
             'kindLabels' => $kindLabels,
+            'backUrl' => route('home', is_array($feedQuery) ? $feedQuery : []),
             'estimateSummary' => $contract->estimate === null ? null
                 : $this->calculator->summarize($contract->estimate, $contract->estimate->lines()->with('priceItem')->get()),
         ]);

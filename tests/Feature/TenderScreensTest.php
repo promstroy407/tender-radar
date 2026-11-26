@@ -66,6 +66,24 @@ class TenderScreensTest extends TestCase
         $this->actingAs($this->admin())->get('/')->assertOk()->assertDontSee('Просмотрено');
     }
 
+    public function test_back_from_tender_returns_to_feed_with_same_filters(): void
+    {
+        $contract = Contract::factory()->create();
+        $admin = $this->admin();
+
+        // Без захода в ленту — просто в ленту.
+        $this->actingAs($admin)->get('/tenders/'.$contract->id)->assertOk()->assertSee('href="'.url('/').'"', false);
+
+        $this->actingAs($admin)->get('/?filter=profile&docs=1&unseen=1')->assertOk();
+        $this->actingAs($admin)->get('/tenders/'.$contract->id)
+            ->assertOk()
+            ->assertSee('href="'.url('/').'?filter=profile&amp;docs=1&amp;unseen=1"', false);
+
+        // Сняли фильтры — «Назад» тоже без них.
+        $this->actingAs($admin)->get('/')->assertOk();
+        $this->actingAs($admin)->get('/tenders/'.$contract->id)->assertOk()->assertSee('href="'.url('/').'" aria-label="Назад к списку"', false);
+    }
+
     public function test_filter_with_documents_shows_only_tenders_with_files_in_estimate(): void
     {
         $withDocs = Contract::factory()->create(['subject' => 'Монтаж АПС школы']);

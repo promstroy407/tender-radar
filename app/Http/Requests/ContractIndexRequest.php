@@ -34,6 +34,31 @@ class ContractIndexRequest extends FormRequest
         ];
     }
 
+    /**
+     * Фильтры и страница ленты, как в адресе, — только проверенные значения.
+     *
+     * @return array<string, string|int>
+     */
+    public function feedQuery(): array
+    {
+        $query = [];
+        $filter = $this->validated('filter');
+        if (is_string($filter) && $filter !== 'all') {
+            $query['filter'] = $filter;
+        }
+        foreach (['docs', 'unseen'] as $toggle) {
+            if ($this->boolean($toggle)) {
+                $query[$toggle] = 1;
+            }
+        }
+        $page = $this->integer('page', 1);
+        if ($page > 1) {
+            $query['page'] = $page;
+        }
+
+        return $query;
+    }
+
     public function toSearch(bool $onlyNew = false): ContractSearch
     {
         /** @var list<string> $regions */
