@@ -19,12 +19,14 @@
         * { box-sizing: border-box; }
         body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
         a { color:var(--accent); text-decoration:none; }
-        .top { background:var(--card); border-bottom:1px solid var(--line); padding:16px 20px 12px; display:flex; flex-direction:column; gap:12px; position:sticky; top:0; z-index:5; }
-        /* Шапка уходит вверх при прокрутке вниз и возвращается при прокрутке вверх
-           или когда курсор подведён к верху окна (решение заказчика 28.11.2026). */
-        .top { transition:transform .2s ease; will-change:transform; }
-        .top.is-hidden { transform:translateY(-100%); }
-        @media (prefers-reduced-motion: reduce) { .top { transition:none; } }
+        .top { background:var(--card); border-bottom:1px solid var(--line); padding:16px 20px 12px; display:flex; flex-direction:column; gap:12px; z-index:5; }
+        /* Шапка прокручивается вместе со страницей и не выскакивает сама. Когда она ушла
+           за край, вверху справа есть кнопка — шапка открывается поверх ленты по нажатию
+           и закрывается им же (решение заказчика 28.11.2026). */
+        .top { position:relative; }
+        .top.is-open { position:fixed; left:0; right:0; top:0; box-shadow:0 8px 24px rgba(0,0,0,.18); max-height:100vh; overflow-y:auto; }
+        .top-toggle { position:fixed; top:10px; right:12px; z-index:6; display:none; align-items:center; gap:6px; min-height:36px; padding:0 12px; border-radius:18px; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:13px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.12); cursor:pointer; }
+        .top-toggle.is-visible { display:inline-flex; }
         .top-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
         .top h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-0.3px; }
         .top .sub { margin:0; font-size:13px; color:var(--muted); }
@@ -127,6 +129,9 @@
 <body>
 @hasSection('top')
     <header class="top">@yield('top')</header>
+    <button type="button" class="top-toggle" aria-expanded="false" aria-label="Показать шапку с фильтрами">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>@yield('top_toggle', 'Меню')</span>
+    </button>
 @endif
 <main class="@yield('main_class')">
     @if (session('status'))
@@ -146,49 +151,26 @@
 <script>
     (() => {
         const header = document.querySelector('header.top');
-        if (!header) return;
-        let lastY = window.scrollY;
-        let upDistance = 0;
-        let hoverTimer = null;
-        let byHover = false;
-        const show = () => { header.classList.remove('is-hidden'); upDistance = 0; byHover = false; };
-        // Не прячем, только пока в шапке вводят дату или выбирают регион.
-        const typing = () => {
-            const el = document.activeElement;
-            return el instanceof HTMLElement && header.contains(el) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName);
+        const toggle = document.querySelector('.top-toggle');
+        if (!header || !toggle) return;
+        const label = toggle.lastElementChild.textContent;
+        const close = () => { header.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); toggle.lastElementChild.textContent = label; };
+        // Кнопка видна, только когда шапка ушла за верхний край.
+        const update = () => {
+            const away = window.scrollY > header.offsetHeight;
+            toggle.classList.toggle('is-visible', away || header.classList.contains('is-open'));
+            if (!away && header.classList.contains('is-open')) close();
         };
-        window.addEventListener('scroll', () => {
-            const y = window.scrollY;
-            if (y <= header.offsetHeight) {
-                show();
-            } else if (y > lastY) {
-                upDistance = 0;
-                if (!typing()) header.classList.add('is-hidden');
-            } else if (y < lastY) {
-                // Возвращаем шапку только после заметной прокрутки вверх (120 px), иначе
-                // она выскакивает при малейшем движении и закрывает верхний тендер.
-                upDistance += lastY - y;
-                if (upDistance > 120) show();
-            }
-            lastY = y;
-        }, { passive: true });
-        // Курсор у самого края окна и задержался там на 0,4 с — шапка выезжает.
-        document.addEventListener('mousemove', (event) => {
-            if (event.clientY <= 6) {
-                hoverTimer ??= setTimeout(() => { show(); byHover = true; }, 400);
-            } else if (hoverTimer !== null) {
-                clearTimeout(hoverTimer);
-                hoverTimer = null;
-            }
-        }, { passive: true });
-        // Вызвали курсором и увели его вниз, к ленте, — шапка снова уходит.
-        header.addEventListener('mouseleave', () => {
-            if (byHover && window.scrollY > header.offsetHeight && !typing()) {
-                header.classList.add('is-hidden');
-                byHover = false;
-            }
+        toggle.addEventListener('click', () => {
+            const open = !header.classList.contains('is-open');
+            header.classList.toggle('is-open', open);
+            toggle.setAttribute('aria-expanded', String(open));
+            toggle.lastElementChild.textContent = open ? 'Скрыть' : label;
+            update();
         });
-        header.addEventListener('focusin', () => { if (typing()) show(); });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+        window.addEventListener('scroll', update, { passive: true });
+        update();
     })();
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});

@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Тендеры')
+@section('top_toggle', 'Фильтры')
 
 @section('top')
     <div class="top-row">
