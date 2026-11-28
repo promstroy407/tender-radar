@@ -104,6 +104,14 @@ class ContractService
             $query->whereDoesntHave('viewers', fn (Builder $users): Builder => $users->whereKey($viewer));
         }
 
+        // Дата загрузки в программу — когда контракт пришёл из ЕИС (created_at).
+        if ($search->loadedFrom !== null) {
+            $query->where('created_at', '>=', $search->loadedFrom->startOfDay());
+        }
+        if ($search->loadedTo !== null) {
+            $query->where('created_at', '<=', $search->loadedTo->endOfDay());
+        }
+
         // Полезная документация загружается в просчёт сама — файлы просчёта и есть признак.
         if ($search->onlyWithDocuments) {
             $query->whereHas('estimate.files');

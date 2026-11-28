@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\ContractFilter;
 use App\Http\Requests\ContractIndexRequest;
 use App\Models\Contract;
+use App\Models\Region;
 use App\Services\ContractService;
 use App\Services\Eis\ContractDocumentsService;
 use App\Services\EisLinkBuilder;
@@ -51,6 +52,10 @@ class TenderController extends Controller
             'active' => $search->filter,
             'unseen' => $search->onlyUnseen,
             'withDocs' => $search->onlyWithDocuments,
+            'regions' => Region::query()->where('is_enabled', true)->orderBy('name')->get(),
+            'region' => $search->regionCodes[0] ?? null,
+            'loadedFrom' => $search->loadedFrom?->toDateString(),
+            'loadedTo' => $search->loadedTo?->toDateString(),
             'money' => $this->money,
         ]);
     }

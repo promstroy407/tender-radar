@@ -66,6 +66,27 @@ class TenderScreensTest extends TestCase
         $this->actingAs($this->admin())->get('/')->assertOk()->assertDontSee('Просмотрено');
     }
 
+    public function test_feed_filters_by_region_and_load_date_and_shows_load_date(): void
+    {
+        Region::factory()->create(['code' => '16', 'name' => 'Республика Татарстан']);
+        Contract::factory()->create(['subject' => 'Казань, вчера', 'region_code' => '16', 'created_at' => '2026-11-27 10:15:00']);
+        Contract::factory()->create(['subject' => 'Казань, неделю назад', 'region_code' => '16', 'created_at' => '2026-11-20 09:00:00']);
+        Contract::factory()->create(['subject' => 'Другой регион, вчера', 'created_at' => '2026-11-27 11:00:00']);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->get('/?region=16&from=2026-11-27&to=2026-11-27')
+            ->assertOk()
+            ->assertSee('Казань, вчера')
+            ->assertSee('Загружен 27.11.2026 10:15')
+            ->assertDontSee('Казань, неделю назад')
+            ->assertDontSee('Другой регион, вчера')
+            // Выбор сохраняется в ссылках фильтров и в «Сбросить» снимается.
+            ->assertSee('filter=profile&amp;region=16&amp;from=2026-11-27&amp;to=2026-11-27', false);
+
+        $this->actingAs($admin)->get('/?from=2026-11-27&to=2026-11-20')->assertSessionHasErrors('to');
+        $this->actingAs($admin)->get('/?region=99')->assertSessionHasErrors('region');
+    }
+
     public function test_back_from_tender_returns_to_feed_with_same_filters(): void
     {
         $contract = Contract::factory()->create();

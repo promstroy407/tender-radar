@@ -40,6 +40,8 @@ use Illuminate\Support\Collection;
  * @property Collection<int, WorkSection> $sections
  * @property bool $requires_smp_subcontract
  * @property int $company_id
+ * @property Carbon $created_at когда контракт загружен в программу из ЕИС
+ * @property Carbon $updated_at
  * @property-read Company $company
  * @property-read Region $region
  * @property-read Offer|null $offer

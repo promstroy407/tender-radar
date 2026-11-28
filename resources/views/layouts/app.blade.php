@@ -84,6 +84,11 @@
         .chip.active { background:var(--ink); color:#fff; border-color:var(--ink); }
         .chip .n { opacity:.75; }
         .chips.toggles { margin-top:8px; }
+        .feed-filter { margin-top:8px; font-size:13px; }
+        .feed-filter summary { cursor:pointer; color:var(--accent); font-weight:500; list-style:none; }
+        .feed-filter summary::-webkit-details-marker { display:none; }
+        .feed-filter form { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+        .feed-filter label { display:flex; flex-direction:column; gap:4px; color:var(--ink2); }
         .chips.toggles .chip { min-height:32px; font-weight:500; }
         .tender.viewed { opacity:.6; }
         .badge.seen { background:var(--field); color:var(--ink2); }
