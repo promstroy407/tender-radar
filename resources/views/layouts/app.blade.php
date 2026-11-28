@@ -20,6 +20,11 @@
         body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
         a { color:var(--accent); text-decoration:none; }
         .top { background:var(--card); border-bottom:1px solid var(--line); padding:16px 20px 12px; display:flex; flex-direction:column; gap:12px; position:sticky; top:0; z-index:5; }
+        /* Шапка уходит вверх при прокрутке вниз и возвращается при прокрутке вверх
+           или когда курсор подведён к верху окна (решение заказчика 28.11.2026). */
+        .top { transition:transform .2s ease; will-change:transform; }
+        .top.is-hidden { transform:translateY(-100%); }
+        @media (prefers-reduced-motion: reduce) { .top { transition:none; } }
         .top-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
         .top h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-0.3px; }
         .top .sub { margin:0; font-size:13px; color:var(--muted); }
@@ -139,6 +144,26 @@
     @endif
 @endauth
 <script>
+    (() => {
+        const header = document.querySelector('header.top');
+        if (!header) return;
+        let lastY = window.scrollY;
+        const show = () => header.classList.remove('is-hidden');
+        window.addEventListener('scroll', () => {
+            const y = window.scrollY;
+            if (y <= header.offsetHeight) {
+                show();
+            } else if (y > lastY + 4 && !header.contains(document.activeElement)) {
+                header.classList.add('is-hidden');
+            } else if (y < lastY - 4) {
+                show();
+            }
+            lastY = y;
+        }, { passive: true });
+        // Курсор у верхнего края окна — шапка выезжает.
+        document.addEventListener('mousemove', (event) => { if (event.clientY < 32) show(); }, { passive: true });
+        header.addEventListener('focusin', show);
+    })();
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
