@@ -9,6 +9,7 @@ use App\Enums\ContractFilter;
 use App\Enums\ContractKind;
 use App\Models\Contract;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -50,6 +51,26 @@ class ContractService
         }
 
         return $result;
+    }
+
+    /**
+     * Свежим считается контракт, заключённый не раньше 30 дней назад (решение заказчика
+     * 28.11.2026): по старому победитель всё уже закупил, тратить время незачем.
+     */
+    public const FRESH_DAYS = 30;
+
+    /**
+     * Убрать устаревшие контракты: заключены раньше FRESH_DAYS дней до $today и по ним
+     * ничего не делали — ни сделки, ни КП, ни просчёта. Возвращает, сколько удалено.
+     */
+    public function pruneStale(CarbonInterface $today): int
+    {
+        return Contract::query()
+            ->where('signed_at', '<', $today->copy()->startOfDay()->subDays(self::FRESH_DAYS))
+            ->whereDoesntHave('deal')
+            ->whereDoesntHave('offer')
+            ->whereDoesntHave('estimate')
+            ->delete();
     }
 
     /** Пользователь открыл тендер: в ленте он станет бледнее и уйдёт ниже. */

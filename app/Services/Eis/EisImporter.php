@@ -11,6 +11,7 @@ use App\Enums\ProcurementLaw;
 use App\Jobs\FetchContractDocuments;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Services\ContractService;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Carbon;
@@ -52,7 +53,9 @@ class EisImporter
                 $parsed++;
 
                 $classification = $this->classifier->classify($contract);
-                if ($classification === null || $contract->supplier === null) {
+                // ЕИС выкладывает и изменения по давним контрактам — берём только свежие.
+                $stale = $contract->signedAt->lt($date->copy()->startOfDay()->subDays(ContractService::FRESH_DAYS));
+                if ($classification === null || $contract->supplier === null || $stale) {
                     $this->forget($contract->registryNumber);
 
                     continue;

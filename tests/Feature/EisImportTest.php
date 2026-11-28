@@ -133,6 +133,41 @@ class EisImportTest extends TestCase
         $this->assertNotNull(Contract::query()->find($inWork->id));
     }
 
+    public function test_old_contracts_are_not_loaded_and_stale_ones_are_pruned(): void
+    {
+        $this->app->make(SettingsService::class)->put(SettingKey::EisToken, self::TOKEN);
+        $old = str_replace('<signDate>2026-11-20</signDate>', '<signDate>2026-01-14</signDate>', $this->contract('3001', 'Выполнение работ по замене электропроводки', '2500000.50', '43.21.10.290', '1215000003'));
+        $this->fakeEis([
+            'contract_1.xml' => $this->contract('3002', 'Выполнение работ по замене электропроводки', '2500000.50', '43.21.10.290', '1215000001'),
+            // Изменение по контракту, заключённому в январе, — в ленту не попадает.
+            'contract_2.xml' => $old,
+        ]);
+
+        $this->command('eis:import', ['--days' => 1, '--until' => '2026-11-20'])->assertSuccessful();
+
+        $this->assertSame(['3002'], Contract::query()->pluck('registry_number')->all());
+
+        // Через месяц контракт устарел: без сделки удаляется, со сделкой остаётся.
+        $inWork = Contract::factory()->create(['law' => ProcurementLaw::Fz44, 'registry_number' => '3003', 'region_code' => '12', 'signed_at' => '2026-11-20']);
+        Deal::factory()->tender()->create(['contract_id' => $inWork->id]);
+        Carbon::setTestNow('2026-12-21 05:23:00');
+        $this->command('contracts:prune-stale')->expectsOutputToContain('Удалено устаревших контрактов: 1')->assertSuccessful();
+        Carbon::setTestNow();
+
+        $this->assertSame(['3003'], Contract::query()->pluck('registry_number')->all());
+    }
+
+    public function test_stale_contracts_are_pruned_every_morning_before_import(): void
+    {
+        $events = array_values(array_filter(
+            $this->app->make(Schedule::class)->events(),
+            fn (Event $event): bool => str_contains((string) $event->command, 'contracts:prune-stale'),
+        ));
+
+        $this->assertCount(1, $events);
+        $this->assertSame('23 5 * * *', $events[0]->expression);
+    }
+
     public function test_missing_token_is_logged(): void
     {
         Http::fake();
