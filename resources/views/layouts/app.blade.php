@@ -148,9 +148,11 @@
         const header = document.querySelector('header.top');
         if (!header) return;
         let lastY = window.scrollY;
-        const show = () => header.classList.remove('is-hidden');
-        // Не прячем, только пока в шапке вводят дату или выбирают регион; нажатая ссылка или
-        // открытый фильтр прятать не мешают (раньше фокус на них держал шапку на месте).
+        let upDistance = 0;
+        let hoverTimer = null;
+        let byHover = false;
+        const show = () => { header.classList.remove('is-hidden'); upDistance = 0; byHover = false; };
+        // Не прячем, только пока в шапке вводят дату или выбирают регион.
         const typing = () => {
             const el = document.activeElement;
             return el instanceof HTMLElement && header.contains(el) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName);
@@ -159,16 +161,34 @@
             const y = window.scrollY;
             if (y <= header.offsetHeight) {
                 show();
-            } else if (y > lastY + 4 && !typing()) {
-                header.classList.add('is-hidden');
-            } else if (y < lastY - 4) {
-                show();
+            } else if (y > lastY) {
+                upDistance = 0;
+                if (!typing()) header.classList.add('is-hidden');
+            } else if (y < lastY) {
+                // Возвращаем шапку только после заметной прокрутки вверх (120 px), иначе
+                // она выскакивает при малейшем движении и закрывает верхний тендер.
+                upDistance += lastY - y;
+                if (upDistance > 120) show();
             }
             lastY = y;
         }, { passive: true });
-        // Курсор у верхнего края окна — шапка выезжает.
-        document.addEventListener('mousemove', (event) => { if (event.clientY < 32) show(); }, { passive: true });
-        header.addEventListener('focusin', (event) => { if (typing()) show(); });
+        // Курсор у самого края окна и задержался там на 0,4 с — шапка выезжает.
+        document.addEventListener('mousemove', (event) => {
+            if (event.clientY <= 6) {
+                hoverTimer ??= setTimeout(() => { show(); byHover = true; }, 400);
+            } else if (hoverTimer !== null) {
+                clearTimeout(hoverTimer);
+                hoverTimer = null;
+            }
+        }, { passive: true });
+        // Вызвали курсором и увели его вниз, к ленте, — шапка снова уходит.
+        header.addEventListener('mouseleave', () => {
+            if (byHover && window.scrollY > header.offsetHeight && !typing()) {
+                header.classList.add('is-hidden');
+                byHover = false;
+            }
+        });
+        header.addEventListener('focusin', () => { if (typing()) show(); });
     })();
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
