@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Data;
 
 use App\Enums\ContractFilter;
-use Illuminate\Support\CarbonImmutable;
+use Carbon\CarbonImmutable;
 
 /**
  * Параметры поиска контрактов, уже прошедшие валидацию.

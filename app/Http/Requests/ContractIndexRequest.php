@@ -7,8 +7,8 @@ namespace App\Http\Requests;
 use App\Data\ContractSearch;
 use App\Enums\ContractFilter;
 use App\Models\Contract;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\CarbonImmutable;
 use Illuminate\Validation\Rule;
 
 class ContractIndexRequest extends FormRequest
