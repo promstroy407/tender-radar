@@ -149,11 +149,17 @@
         if (!header) return;
         let lastY = window.scrollY;
         const show = () => header.classList.remove('is-hidden');
+        // Не прячем, только пока в шапке вводят дату или выбирают регион; нажатая ссылка или
+        // открытый фильтр прятать не мешают (раньше фокус на них держал шапку на месте).
+        const typing = () => {
+            const el = document.activeElement;
+            return el instanceof HTMLElement && header.contains(el) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName);
+        };
         window.addEventListener('scroll', () => {
             const y = window.scrollY;
             if (y <= header.offsetHeight) {
                 show();
-            } else if (y > lastY + 4 && !header.contains(document.activeElement)) {
+            } else if (y > lastY + 4 && !typing()) {
                 header.classList.add('is-hidden');
             } else if (y < lastY - 4) {
                 show();
@@ -162,7 +168,7 @@
         }, { passive: true });
         // Курсор у верхнего края окна — шапка выезжает.
         document.addEventListener('mousemove', (event) => { if (event.clientY < 32) show(); }, { passive: true });
-        header.addEventListener('focusin', show);
+        header.addEventListener('focusin', (event) => { if (typing()) show(); });
     })();
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
